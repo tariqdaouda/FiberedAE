@@ -7,9 +7,9 @@ This repository contains all code for creating and training FAEs.
   * Examples in the form of Jupyter notebooks are available in the the folder: **/demos**.
   * Model hyper-parameters can be found in a human readable format in: **/demos/configuration**.
 
-This package has only been tested on Ubuntu machines running python 3.7.
+## Installation
 
-We highly recommend installing the package in a fresh Anaconda environement.
+This package has only been tested on Ubuntu machines running python 3.7. We highly recommend installing the package in a fresh Anaconda environement.
 
 To create the environement we used:
 
