@@ -9,7 +9,7 @@ This repository contains all code for creating and training FAEs.
 
 ## Installation
 
-This package has only been tested on Ubuntu machines running python 3.7. We highly recommend installing the package in a fresh Anaconda environement.
+This package has only been tested on Ubuntu machines running python 3.7. We highly recommend installing the package in a fresh Anaconda environment.
 
 To create the environment we used:
 
