@@ -12,7 +12,7 @@ setup(
     description='Implementation of Fibered Auto Encoders (FAE)',
     long_description=""" Implementation of Fibered Auto Encoders (FAE).
     FAE is a short name which refers to Auto Encoders whose space of latent variables have a fiber bundle structure. 
-    This implementation acts as a proof of concept and aims at illustrating""",
+    This implementation acts as a proof of concept and aims at illustrating the concept""",
     url='',
 
     author='Anonymous Authors',
