@@ -1,7 +1,7 @@
 import torch
 import numpy
 
-from hnapub.utils import nn as nnutils
+from fiberedae.utils import nn as nnutils
 
 
 AVAILABLE_PROJECTION_TYPES = ["torus", "cube"]

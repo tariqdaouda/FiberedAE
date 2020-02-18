@@ -2,11 +2,10 @@ import os
 import numpy
 import tarfile
 import tempfile
-# import glob
+
 import scanpy as sc
 import pandas as pd
-import hnapub.contrib.pegasus as pg
-import hnapub.contrib.harmony as hpy
+import harmonypy as hpy
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC

@@ -25,7 +25,7 @@ setup(
         'Programming Language :: Python :: 3',
     ],
 
-    install_requires=["numpy", "scipy", "matplotlib", "holoviews", "torch", "umap-learn", "scanpy", "scgen", "click", "pandas", "scikit-image", "torchvision", "tqdm"],
+    install_requires=["numpy", "scipy", "matplotlib", "holoviews", "torch", "umap-learn", "scanpy", "scgen", "click", "pandas", "scikit-image", "torchvision", "tqdm", "harmonypy"],
 
     keywords='',
 
