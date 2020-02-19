@@ -26,3 +26,7 @@ To install the package go inside the package folder and install it using:
 If you are running miniconda and want to run the notebooks, you further need to install jupyter lab:
 
 ```conda install -c conda-forge jupyterlab```
+
+You may also need to install ipywidgets for progress bars to work.
+
+```conda install -c conda-forge ipywidgets```
