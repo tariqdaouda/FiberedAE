@@ -6,6 +6,7 @@
     },
     "optimizer": {
 	    "name": "RMSprop",
+	    "lambda": 0.0,
 	    "args": {
 		"lr": 1e-3,
 		"momentum": 0.0,
@@ -25,7 +26,7 @@
 	"geodesics_1d_projections": true,
 	"geodesics_diffeomorphism": false,
 	"geodesics_interpolation" : true,
-	"geodesics_energy_curves" : false,
+	"geodesics_energy_curves" : true,
 	"geodesics_correspondence": true,
         "geodesics_3d"            : false
     }
