@@ -13,12 +13,12 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 # Local imports
-import fiberedae.models.hna          as mod
+import fiberedae.models.fae          as mod
 import fiberedae.utils.basic_trainer as vtrain
 import fiberedae.utils.persistence   as vpers
 import fiberedae.utils.nn            as vnnutils
 import fiberedae.utils.plots         as vplots
-import fiberedae.utils.hna           as vhna
+import fiberedae.utils.fae           as vfae
 import fiberedae.utils.datasets      as vdatasets
 import fiberedae.utils.useful        as us
 
@@ -287,6 +287,7 @@ def shooting_iteration(f, c1, c2, counter, geodesics_module, device, epochs, con
     config : JSON config
     model  : Model to use. If None, model is loaded from disk.
     """
+    import os, pickle
     filename = config["output"] + "geodesic_%05d.p"%counter
     if os.path.exists(filename):
         print("%d. Geodesic already exists!"%counter)
@@ -300,7 +301,7 @@ def shooting_iteration(f, c1, c2, counter, geodesics_module, device, epochs, con
     warnings.simplefilter("ignore")
     # Reload model, otherwise serialization using Loky is extremely costly
     if not model:
-        model, optimizer, history, label_encoding = vpers.load_model( config["model"], mod.HNA_WithCond, map_location=device)
+        model, optimizer, history, label_encoding = vpers.load_model( config["model"], mod.FiberedAE, map_location=device)
     # Compute
     b1 = model.conditions( torch.tensor( c1 ) )
     b2 = model.conditions( torch.tensor( c2 ) )
@@ -385,7 +386,7 @@ def plot_diffeomorphism( fiber_grid ):
 
 def plot_geodesics_interpolation(model, fiber_grid, frames):
     def plot_interpolation(flag, frames):
-        count    = config["sample_mode"]["geodesics_count"]
+        count    = len(fiber_grid)
         result   = []
         for i in range(count):
             datum = fiber_grid[i]
@@ -467,7 +468,7 @@ def plot_geodesics_correspondence( model, fiber_grid, nb_ticks ):
     for i in range( len(decodings)):
         pixels_count   = decodings[i].shape[1]
         pixels_per_dim = math.floor( math.sqrt( pixels_count ) )
-        decodings[i]  = decodings[i].view( count, 1, pixels_per_dim, pixels_per_dim )
+        decodings[i]  = decodings[i].view( len(fiber_grid), 1, pixels_per_dim, pixels_per_dim )
     for i in range( len(decodings)):
         plt.subplot(1, 3, i+1)
         imgs  = torchvision.utils.make_grid( decodings[i], nrow=nb_ticks)
@@ -475,7 +476,7 @@ def plot_geodesics_correspondence( model, fiber_grid, nb_ticks ):
         npimg = np.transpose(npimg, (1, 2, 0))
         plt.title( decoding_strings[i] )
         plt.imshow(npimg)
-    return plot
+    return plt
 
 def plot_geodesics_3d(time_grid, fiber_grid):
     mpl.rcParams['legend.fontsize'] = 10
