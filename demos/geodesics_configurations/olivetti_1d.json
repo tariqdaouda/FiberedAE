@@ -1,0 +1,32 @@
+{
+    "model": "./trained_models/olivetti_4000e.pytorch.mdl",
+    "numerics": {
+        "n_max": 6,
+        "step_count": 256
+    },
+    "optimizer": {
+	    "name": "RMSprop",
+	    "args": {
+		"lr": 1e-3,
+		"momentum": 0.0,
+		"centered": true
+	    }
+    },
+    "sample_mode": {
+	"name"           : "grid_1d",
+	"src_condition"  : 8,
+	"dst_condition"  : 9,
+	"geodesics_count": 6
+    },
+    "output"       : "./geodesics_output/olivetti_1d/",
+    "geodesic_mode": "shooting",
+    "plot_options": {
+	"latent_grid"             : true,
+	"geodesics_1d_projections": true,
+	"geodesics_diffeomorphism": false,
+	"geodesics_interpolation" : true,
+	"geodesics_energy_curves" : false,
+	"geodesics_correspondence": true,
+        "geodesics_3d"            : false
+    }
+}

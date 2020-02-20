@@ -1,0 +1,38 @@
+{
+    "model": "./trained_models/kang_pbmc_2000e.pytorch.mdl",
+    "numerics": {
+        "n_max": 6,
+        "step_count": 256
+    },
+    "optimizer": {
+	    "name": "RMSprop",
+	    "lambda": 0.01,
+	    "args": {
+		"lr": 2e-4,
+		"momentum": 0.9,
+                "centered": true
+	    }
+    },
+    "sample_mode": {
+	"name": "dataset",
+	"ref_condition": 1
+    },
+    "dataset": {
+        "name"           : "kang_pbmc",
+        "filepath"       : "./datasets/kang_normalized_2khv.h5ad",
+	"backup_url"     : "",
+	"condition_field": "condition"
+    },
+    "output"       : "./geodesics_output/kang_pbmc/",
+    "geodesic_mode": "shooting",
+    "plot_options": {
+	"latent_grid": false,
+	"geodesics_1d_projections": true,
+	"geodesics_diffeomorphism": false,
+	"geodesics_interpolation" : false,
+	"geodesics_energy_curves" : false,
+        "geodesics_3d"            : false,
+	"geodesics_correspondence": false
+    }
+}
+

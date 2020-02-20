@@ -1,0 +1,33 @@
+{
+    "model": "./trained_models/mnist_200e.pytorch.mdl",
+    "numerics": {
+        "n_max": 6,
+        "step_count": 256
+    },
+    "optimizer": {
+	    "name": "RMSprop",
+	    "lambda": 0.0,
+	    "args": {
+		"lr": 5e-4,
+		"momentum": 0.0,
+		"centered": true
+	    }
+    },
+    "sample_mode": {
+	"name"           : "grid",
+	"src_condition"  : 4,
+	"dst_condition"  : 9,
+	"geodesics_count": 9
+    },
+    "output"       : "./geodesics_output/mnist_shooting/",
+    "geodesic_mode": "shooting",
+    "plot_options": {
+	"latent_grid"             : true,
+	"geodesics_1d_projections": true,
+	"geodesics_diffeomorphism": true,
+	"geodesics_interpolation" : true,
+	"geodesics_energy_curves" : true,
+	"geodesics_correspondence": true,
+        "geodesics_3d"            : true
+    }
+}
