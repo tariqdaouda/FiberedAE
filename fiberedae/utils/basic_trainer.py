@@ -213,6 +213,8 @@ class Trainer(object):
         train_gan_generator_freq,
         train_condition_fit_predictor_freq,
         train_condition_fit_generator_freq,
+        cond_adv_sampling=False,
+        cond_fitting_sampling=False,
         gan_sampling=False,
     ):
         
@@ -232,9 +234,13 @@ class Trainer(object):
             samples = samples.to(run_device)
             condition = condition.to(run_device)
 
-            recons = model.forward_output(samples, condition)
+            if cond_adv_sampling or cond_fitting_sampling or gan_sampling:
+                fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                fiber_sample = (fiber_sample * 2) - 1
+            
             #TRAIN RECONSTRUCTION   
             if self.meta["current_batch_id"] % train_reconctruction_freq == 0:
+                recons = model.forward_output(samples, condition)
                 if self.optimizers["reconstruction"] is not None :
                     ret, cont = self._train_supervised(recons, samples, self.reconstruction_criterion, self.optimizers["reconstruction"], ignore_sample_zeros=self.ignore_sample_zeros, contraction=True)
                     train_losses["reconstruction"].append(ret)
@@ -242,6 +248,13 @@ class Trainer(object):
                         train_losses["reconstruction_contraction"].append(cont)
         
             #TRAIN CONDITION ADVERSARIAL (DANN)   
+            if cond_fitting_sampling:
+                # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                # fiber_sample = (fiber_sample * 2) - 1
+                recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+            else:
+                recons = model.forward_output(samples, condition)
+            
             if self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
                 if self.optimizers["condition_adv"] is not None :
                     model.forward_output(samples, condition)
@@ -252,7 +265,12 @@ class Trainer(object):
                         train_losses["condition_adv_contraction"].append(cont)
 
             #TRAIN CONDITION FITING PREDICTOR   
-            recons = model.forward_output(samples, condition)
+            if gan_sampling:
+                # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                # fiber_sample = (fiber_sample * 2) - 1
+                recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+            else:
+                recons = model.forward_output(samples, condition)
             p_loss, g_loss = self._train_condition_prediction(
                 classifier=model.predict_condition,
                 nb_class=model.nb_class,
