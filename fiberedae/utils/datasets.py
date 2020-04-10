@@ -62,6 +62,8 @@ class AnnDataDataset(torch.utils.data.Dataset):
         else:
             self.X_data = torch.tensor( self.X_data, dtype=torch.float )
 
+        print("data shape:", self.X_data.shape)
+        
         self.obs_data = None 
         if self.include_obs :
             self.obs_data = {}

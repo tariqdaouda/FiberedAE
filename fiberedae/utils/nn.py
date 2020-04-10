@@ -101,3 +101,119 @@ class ScaleNonLinearity(torch.nn.Module):
         
         value = ( value - self.original_min) * ( final_scale / original_scale ) + self.final_min
         return value
+
+
+class GradientReverse(torch.autograd.Function):
+    """Implementation of gradient reverse layer"""
+    scale = 1.0
+    @staticmethod
+    def forward(ctx, x):
+        return x.view_as(x)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        new_grads = GradientReverse.scale * grad_output.neg()
+        return new_grads
+    
+def grad_reverse(x, scale=1.0):
+    GradientReverse.scale = scale
+    return GradientReverse.apply(x)
+
+class InputResidualSequential(torch.nn.Module):
+    """Propagates through the network while concatenating a skip input at every level"""
+    def __init__(self, layers):
+        super(InputResidualSequential, self).__init__()
+        self.layers = layers
+
+    def forward(self, x, skip_input, layer_id=None) :
+        if layer_id is not None:
+            assert abs(layer_id) <= len(self) -1
+
+        if layer_id is not None and layer_id < 0:
+            layer_id = len(self) + layer_id
+
+        layer_in = x
+        out = None
+        for i, layer in enumerate(self.layers) :
+            out = layer(layer_in) 
+            layer_in = torch.cat( [out, skip_input], 1 )
+            
+            if layer_id == i:
+                break
+        return out
+
+    def __getitem__(self, i):
+        return self.layers[i]
+
+    def __len__(self):
+        return len(self.layers)
+
+class MLPClassifier(torch.nn.Module):
+    """docstring for MLPClassifier"""
+    def __init__(self, x_dim, nb_classes, nb_layers, h_dim, non_linearity, sigmoid_out=False):
+        super(MLPClassifier, self).__init__()
+        assert nb_classes > 1
+
+        if sigmoid_out :
+            last_nl = torch.nn.Sigmoid()
+            out_dim = 1
+        else :
+            last_nl = torch.nn.Softmax(dim=1)
+            out_dim = nb_classes
+
+        layers = nnutils.get_fc_network(
+            x_dim=x_dim,
+            h_dim=h_dim,
+            out_dim=out_dim,
+            nb_layers=nb_layers,
+            non_linearity=non_linearity,
+            last_non_linearity=last_nl
+        )
+        self.layers = torch.nn.Sequential(*layers)
+
+    def forward(self, x) :
+        return self.layers(x)
+
+class FiberSpace(torch.nn.Module):
+    AVAILABLE_PROJECTION_TYPES = ["torus", "cube"]
+    
+    def __init__(self, x_dim, h_dim, fiber_dim, nb_layers, non_linearity, projection_type, projection_batchnorm):
+        super(FiberSpace, self).__init__()
+        if projection_type == "torus" and fiber_dim % 2 != 0 :
+            raise ValueError("for torus projection fiber_dim must be a multiple of 2")
+        
+        self.pre_projection = nnutils.get_fc_network(
+                x_dim=x_dim,
+                h_dim=h_dim,
+                out_dim=h_dim,
+                nb_layers=nb_layers,
+                non_linearity=non_linearity,
+                last_non_linearity=non_linearity
+            )
+
+        self.projection = nnutils.get_fc_layer(
+            in_dim=h_dim,
+            out_dim=fiber_dim,
+            non_linearity=None,
+            batchnorm = projection_batchnorm
+        )
+        self.out_dim = fiber_dim
+        self.projection_type = projection_type        
+        self.projection.apply(init_weights)
+
+    def project(self, x):
+        proj = self.projection(x)
+        if self.projection_type == "cube":
+            proj = torch.sin(proj)
+        elif self.projection_type == "torus":
+            half = self.out_dim//2
+            sin, cos = torch.sin(proj[:, :half]), torch.cos(proj[:, half:])
+            proj = torch.cat([sin, cos], 1)
+        else :
+            raise ValueError("Unknown projection type: %s, available: %s" % (projection_type, self.AVAILABLE_PROJECTION_TYPES) )
+        return proj
+
+    def forward(self, x):
+        out = self.pre_projection(x)
+        out = self.project(out)
+        return out

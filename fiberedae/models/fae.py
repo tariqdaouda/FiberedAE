@@ -113,7 +113,7 @@ class FiberSpace(torch.nn.Module):
         )
         self.out_dim = fiber_dim
         self.projection_type = projection_type        
-        self.projection.apply(init_weights)
+        # self.projection.apply(init_weights)
 
     def project(self, x):
         proj = self.projection(x)
