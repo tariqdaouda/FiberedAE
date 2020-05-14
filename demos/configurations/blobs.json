@@ -1,0 +1,81 @@
+{
+    "dataset": {
+        "name": "blobs"
+    },
+    "trainer": {
+        "l_contraction": 0
+    },
+    "model": {
+        "h_dim":8,
+        "non_linearity": "sin",
+        "nb_hidden": 50,
+        "gan_discriminator_h_dim": 8,
+        "gan_discriminator_nb_hidden": 1,
+        "gan_discriminator_non_linearity": "leakyrelu",
+        "conditioned": true,
+        "projection_type": "cube",
+        "wgan": false,
+        "base_dim": 1,
+        "fiber_dim": 3,
+        "nb_fiber_hidden": 2,
+        "fiber_batchnorm": false,
+        "condition_adv_h_dim": 8,
+        "condition_adv_nb_hidden": 1,
+        "condition_adv_non_linearity": "relu",
+        "condition_fit_h_dim": 8,
+        "condition_fit_nb_hidden": 1,
+        "condition_fit_non_linearity": "leakyrelu",
+        "residual_fiber": true,
+        "residual_base": true,
+        "contract_fiber": false,
+        "contract_base": false
+    },
+    "optimizers": {
+        "reconstruction": {
+            "name": "Adam",
+            "args": {
+                "lr": 0.00001
+            }
+        },
+        "gan_generator": {
+            "name": "Adam",
+            "args": {
+                "lr": 0
+            }
+        },
+        "gan_discriminator": {
+            "name": "Adam",
+            "args": {
+                "lr": 0
+            }
+        },
+        "condition_adv": {
+            "name": "Adam",
+            "args": {
+                "lr": 0
+            }
+        },
+        "condition_fit": {
+            "name": "Adam",
+            "args": {
+                "lr": 0
+            }
+        },
+        "condition_fit_generator": {
+            "name": "Adam",
+            "args": {
+                "lr": 0
+            }
+        }
+    },
+    "hps": {
+        "nb_epochs": 100,
+        "minibatch_size": 128,
+        "train_reconctruction_freq": 1,
+        "train_gan_discrimator_freq": 1,
+        "train_gan_generator_freq": 1,
+        "train_condition_adv_freq": 1,
+        "train_condition_fit_predictor_freq": 1,
+        "train_condition_fit_generator_freq": 1
+    }
+}
