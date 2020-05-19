@@ -32,23 +32,32 @@ def get_optimizer(config, sub_model):
         return torch_optimizer(params, **optimizer_kwargs)
     return _do
 
-def load_configuration(jsonfile):
+def load_configuration(jsonfile, get_original=False):
     """load a json confguration file"""
     import json
+    import copy
+
     non_linearities = {
         "sin": torch.sin,
         "relu": torch.nn.ReLU(),
         "leakyrelu": torch.nn.LeakyReLU()
     }
 
+    bck_json = None
     with open(jsonfile) as f:
         config = json.load(f)
+        if get_original:
+            bck_json = copy.deepcopy(config)
+        
         for k, v in config["model"].items():
             if k.find("non_linearity") > -1 :
                 config["model"][k] = non_linearities[v.lower()]
 
         for k, v in config["optimizers"].items():
             config["optimizers"][k] = get_optimizer(config, k)
+
+    if get_original:
+        return config, bck_json
 
     return config
 

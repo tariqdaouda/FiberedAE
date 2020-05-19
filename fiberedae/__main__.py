@@ -1,13 +1,15 @@
 import fiberedae.models.fae as vmod
 import fiberedae.utils.basic_trainer as vtrain
 import fiberedae.utils.persistence as vpers
-import fiberedae.utils.single_cell as vsc
+# import fiberedae.utils.single_cell as vsc
 import fiberedae.utils.datasets as vdatasets
 import fiberedae.utils.useful as us
+import fiberedae.utils.nn as vnnutils
 
 import argparse
 import random
 import os
+import json
 
 epictetus = [
     "It's not what happens to you, but how you react to it that matters.",
@@ -17,8 +19,10 @@ epictetus = [
     "It is impossible for a man to learn what he thinks he already knows."
 ]
 
-def get_folder_name(folder):
+def get_folder_name(folder, overwrite):
     import time
+    if overwrite:
+        return folder
     suffix = time.ctime().replace(" ", "-")
     return "%s-%s" %(folder, suffix) 
 
@@ -28,21 +32,30 @@ def main():
     parser.add_argument("experiment_name", help="experiment name", type=str, action="store")
     parser.add_argument("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1, action="store")
     parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default="")
-    parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="gpu")
+    parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cuda")
+    parser.add_argument("--no_overwrite", help="If true will create an ew folder each time", type=bool, default=True, action="store")
     
     args=parser.parse_args().__dict__
 
+    print("\n=====")
     print("%s -- Epictetus" % random.choice(epictetus))
+    print("=====\n")
     
-    print("creating folder...")
-    exp_folder = get_folder_name(args["name"])
+    print("\t creating folder...")
+    exp_folder = get_folder_name(args["experiment_name"], not args["no_overwrite"])
     os.mkdir(exp_folder)
 
 
-    config = us.load_configuration(args["configuration_file"])
+    print("\t loading configuration...")
+    config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+    print(orig_conf)
 
+    print("\t loading dataset...")
+    dataset = us.load_dataset(config)
+
+    print("\t making model...")
     if args["model"] != "" :
-        model = vpers.load_model(args["model"], vmod.FiberedAE, args["device"])[0]
+        model = vpers.load(args["model"], vmod.FiberedAE, args["device"])
     else :
         #make model
         model_args = dict(config["model"])
@@ -56,21 +69,25 @@ def main():
         model = vmod.FiberedAE(**model_args)
         model.to(args["device"])
 
-    print("training...")
+    print("\t training...")
     if args["epochs"] > 0:
-        config["hps"]["nb_epochs"] = args["epochs"]
+        orig_conf["hps"]["nb_epochs"] = args["epochs"]
     
-    trainer, history = us.train(model, dataset, config, nb_epochs=epochs)
+    trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"])
 
-    print("saving model...")
-    vpers.save_model(
-        model, {}, history, {}, dataset["label_encoding"], model_args,
-        os.path.join(exp_folder, "model.pytorch.mdl")
-    )
+    print("\t saving model...")
+    vpers.save(
+        model,
+        filename=os.path.join(exp_folder, "model.pt"),
+        training_history=history,
+        meta_data=None,
+        condition_encoding=dataset["label_encoding"],
+        model_args=None, # buggy pytorch pkl save
+   )
 
-    print("saving config...")
-    with open(os.path.join(exp_folder, "configuration.json")) as f:
-        json.dump(config)
+    print("\t saving config...")
+    with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
+        json.dump(orig_conf, f)
 
 
 if __name__ == "__main__" :
