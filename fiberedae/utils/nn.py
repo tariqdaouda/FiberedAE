@@ -38,6 +38,28 @@ class ModuleFunction(torch.nn.Module):
         except:
             return "%s(function)" % (self.__class__.__name__)
 
+class PNonLinearity(torch.nn.Module):
+    """Parametrised a*func(x)"""
+    def __init__(self, function, init_value=1.):
+        super(PNonLinearity, self).__init__()
+        self.function = function
+        self.init_value = init_value
+        self.weights = None
+
+    def forward(self, x):
+        if self.weights is None:
+            tensor = torch.Tensor(x.size[0]).fill_(self.init_value)
+            self.weights = torch.nn.Parameter(tensor)
+
+        val = self.weights * self.function(x)
+        return val
+
+    def __repr__(self):
+        try :
+            return "%s(%s)" % (self.__class__.__name__, self.non_linearity.__name__)
+        except:
+            return "%s(function)" % (self.__class__.__name__)
+
 def get_fc_layer(in_dim, out_dim, non_linearity, batchnorm, bias=True):
     layer = torch.nn.Linear(in_dim, out_dim, bias=bias)
     to_add = [layer]

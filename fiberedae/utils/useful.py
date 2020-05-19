@@ -6,11 +6,13 @@ def load_dataset(config):
     datasets = {
         "mnist"       : lambda: vdatasets.load_mnist(config["hps"]["minibatch_size"]),
         "olivetti"    : lambda: vdatasets.load_olivetti(config["hps"]["minibatch_size"]),
+        "blobs"    : lambda: vdatasets.load_blobs(config["hps"]["minibatch_size"]),
         "single_cell"    : lambda: vdatasets.load_single_cell(
             batch_size=config["hps"]["minibatch_size"],
             condition_field=config["dataset"]["condition_field"],
             filepath=config["dataset"]["filepath"],
-            dataset_name=config["dataset"]["dataset_name"]
+            dataset_name=config["dataset"]["dataset_name"],
+            backup_url=config["dataset"]["backup_url"]
         ),
     }
 

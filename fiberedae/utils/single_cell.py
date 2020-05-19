@@ -11,12 +11,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 
-def load_10x_dataset(filepath):
+def load_10x_dataset(filepath, backup_url=None):
     """load an h5ad (v3) of an mtx in a tar.gz (v1, v2) file"""
     
     filename = os.path.basename(filepath)
     
-    adata = sc.read(filepath)
+    adata = sc.read(filepath, backup_url)
     adata.obs["dataset"] = pd.Series()
     adata.obs["dataset"] = filename
     

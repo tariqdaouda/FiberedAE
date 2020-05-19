@@ -297,10 +297,10 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
         "sample_scale": scale
     }
 
-def load_single_cell(batch_size, condition_field, filepath, dataset_name, max_norm=True):
+def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup_url=None):
     from . import single_cell
     adata = single_cell.load_10x_dataset(filepath)
-    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
+    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, backup_url=backup_url)
 
 def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate=0, random_state=1234):
     """Make a blobs (isotropic gaussians) datasets"""
