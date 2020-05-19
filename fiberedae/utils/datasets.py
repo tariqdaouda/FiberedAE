@@ -30,6 +30,20 @@ class SklearnDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.images)
 
+class BasicDataset(object):
+    """docstring for BasicDataset"""
+    def __init__(self, samples, targets):
+        super(BasicDataset, self).__init__()
+        self.samples = samples
+        self.targets = targets
+
+    def __getitem__(self, idx):
+        return self.samples[idx], self.targets[idx]
+
+    def __len__(self):
+        return len(self.samples)
+
+        
 class AnnDataDataset(torch.utils.data.Dataset):
     def __init__(self, adata, X_field=None, X_expressions_transform=None, include_obs=None, obs_transforms=None, pre_densify=False, oversample_obs_key=None):
         """
@@ -232,7 +246,7 @@ def load_olivetti(batch_size):
     }
 
 
-def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None,):
+def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None):
     
     le = get_label_encoder(adata.obs[condition_field])
     print(condition_field, adata.obs[condition_field].unique())
@@ -283,7 +297,56 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
         "sample_scale": scale
     }
 
-def load_single_cell(batch_size, condition_field, filepath, dataset_name, max_norm=True):
+def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup_url=None):
     from . import single_cell
-    adata = single_cell.load_10x_dataset(filepath)
+    adata = single_cell.load_10x_dataset(filepath, backup_url=backup_url)
     return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
+
+def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate=0, random_state=1234):
+    """Make a blobs (isotropic gaussians) datasets"""
+    from sklearn.datasets import make_blobs
+    blobs, targets = make_blobs(n_samples=n_samples, centers=nb_class, n_features=nb_dim, random_state=1234)
+    blobs = blobs - np.min(blobs)
+    blobs = blobs / np.max(blobs)
+
+    blobs_clean = blobs
+    if dropout_rate > 0:
+        mask = np.random.binomial(1, 1-dropout_rate, blobs.shape)
+        blobs = mask * blobs
+    
+    torch_blobs = torch.tensor( blobs, dtype=torch.float )
+    torch_targets = torch.tensor( targets )
+    if mask_class:
+        torch_targets = torch.zeros_like(torch_targets)
+
+    dataset = BasicDataset(torch_blobs, torch_targets)
+    train_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+
+    return {
+        "name": "Blobs",
+        "datasets": {
+            "train": {
+                "dataset": dataset,
+                "samples": blobs,
+                "clean_samples": blobs_clean,
+                "unmasked_targets": targets,
+            },
+            "test": None,
+        },
+        "loaders": {
+            "train": train_loader,
+            "test": None,
+        },
+        "shapes": {
+            "nb_class": nb_class,
+            "input_size": nb_dim,
+            "total_size": len(blobs),
+            "train_size": len(blobs),
+            "test_size": None,
+        },
+        "batch_formater": lambda x: (x[0], x[1]),
+        "label_encoding": None,
+        "sample_scale": (0, 1)
+    }
+
+

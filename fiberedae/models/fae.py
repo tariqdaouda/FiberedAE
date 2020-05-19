@@ -158,11 +158,15 @@ class FiberedAE(torch.nn.Module):
         contract_fiber,
         contract_base,
         projection_type,
+        pnon_linearity_l1=0.,
         wgan=False,
         output_transform=None,
     ):
         super(FiberedAE, self).__init__()
       
+        if pnon_linearity_l1 > 0:
+            non_linearity = nnutils.PNonLinearity(non_linearity)
+
         self.fiber = FiberSpace(    # Encoder
             x_dim=x_dim,             # Xdim (Math renaming scheme)
             h_dim=h_dim,             # Ydim (Math renaming scheme)
@@ -238,7 +242,7 @@ class FiberedAE(torch.nn.Module):
             )
         self.output_gan_discriminator.apply(init_weights)
 
-
+        self.pnon_linearity_l1 = pnon_linearity_l1
         self.wgan = wgan
         self.last_in = None
         self.last_out = None

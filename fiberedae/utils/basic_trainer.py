@@ -239,8 +239,7 @@ class Trainer(object):
                 fiber_sample = (fiber_sample * 2) - 1
             
             #TRAIN RECONSTRUCTION   
-            if self.meta["current_batch_id"] % train_reconctruction_freq == 0:
-                recons = model.forward_output(samples, condition)
+            if train_reconctruction_freq > 0 and self.meta["current_batch_id"] % train_reconctruction_freq == 0:
                 if self.optimizers["reconstruction"] is not None :
                     ret, cont = self._train_supervised(recons, samples, self.reconstruction_criterion, self.optimizers["reconstruction"], ignore_sample_zeros=self.ignore_sample_zeros, contraction=True)
                     train_losses["reconstruction"].append(ret)
@@ -255,9 +254,9 @@ class Trainer(object):
             else:
                 recons = model.forward_output(samples, condition)
             
-            if self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
+            if train_condition_adv_freq > 0 and self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
                 if self.optimizers["condition_adv"] is not None :
-                    model.forward_output(samples, condition)
+                    # model.forward_output(samples, condition)
                     condition_adv = model.predict_fiber_condition()
                     ret, cont = self._train_classifier(model.nb_class, condition_adv, condition, self.optimizers["condition_adv"], contraction=True)
                     train_losses["condition_adv"].append(ret)
@@ -279,8 +278,8 @@ class Trainer(object):
                 targets=condition,
                 p_optimizer=self.optimizers["prediction"],
                 g_optimizer=self.optimizers["condition_fit_generator"],
-                train_p = self.meta["current_batch_id"] % train_condition_fit_predictor_freq == 0,
-                train_g = self.meta["current_batch_id"] % train_condition_fit_generator_freq == 0
+                train_p = train_condition_fit_predictor_freq> 0 and (self.meta["current_batch_id"] % train_condition_fit_predictor_freq == 0),
+                train_g = train_condition_fit_generator_freq > 0 and (self.meta["current_batch_id"] % train_condition_fit_generator_freq == 0)
             )
             if p_loss: train_losses["prediction"].append(p_loss)
             if g_loss: train_losses["condition_fit_generator"].append(g_loss)
@@ -303,8 +302,8 @@ class Trainer(object):
                 run_device,
                 self.optimizers["gan_generator"],
                 self.optimizers["gan_discriminator"],
-                train_g = self.meta["current_batch_id"] % train_gan_generator_freq == 0,
-                train_d = self.meta["current_batch_id"] % train_gan_discrimator_freq == 0
+                train_g = train_gan_generator_freq > 0 and (self.meta["current_batch_id"] % train_gan_generator_freq == 0),
+                train_d = train_gan_discrimator_freq > 0 and (self.meta["current_batch_id"] % train_gan_discrimator_freq == 0)
             )
             if g_loss: train_losses["gan_generator"].append(g_loss)
             if d_loss: train_losses["gan_discriminator"].append(d_loss)
