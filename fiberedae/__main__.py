@@ -11,13 +11,6 @@ import random
 import os
 import json
 
-epictetus = [
-    "It's not what happens to you, but how you react to it that matters.",
-    "We have two ears and one mouth so that we can listen twice as much as we speak.",
-    "Only the educated are free.",
-    "He who laughs at himself never runs out of things to laugh at.",
-    "It is impossible for a man to learn what he thinks he already knows."
-]
 
 def get_folder_name(folder, overwrite):
     import time
@@ -26,6 +19,25 @@ def get_folder_name(folder, overwrite):
     suffix = time.ctime().replace(" ", "-")
     return "%s-%s" %(folder, suffix) 
 
+
+def get_quote():
+    epictetus = [
+        "It's not what happens to you, but how you react to it that matters.",
+        "We have two ears and one mouth so that we can listen twice as much as we speak.",
+        "Only the educated are free.",
+        "He who laughs at himself never runs out of things to laugh at.",
+        "It is impossible for a man to learn what he thinks he already knows."
+    ]
+
+    quote = "%s -- Epictetus" % random.choice(epictetus)
+    sep = "="* (len(quote) + 4)
+    ret = []
+    ret.append(sep)
+    ret.append("| " + quote + " |")
+    ret.append(sep)
+    return "\n".join(ret)
+
+print(get_quote())
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
@@ -37,14 +49,10 @@ def main():
     
     args=parser.parse_args().__dict__
 
-    print("\n=====")
-    print("%s -- Epictetus" % random.choice(epictetus))
-    print("=====\n")
-    
+
     print("\t creating folder...")
     exp_folder = get_folder_name(args["experiment_name"], not args["no_overwrite"])
     os.mkdir(exp_folder)
-
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
