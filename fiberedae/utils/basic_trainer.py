@@ -203,7 +203,8 @@ class Trainer(object):
 
         return g_loss_val, d_loss_val
 
-    def train(self,
+    def train(
+        self,
         model,
         train_loader,
         batch_formater,

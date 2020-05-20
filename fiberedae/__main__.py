@@ -54,18 +54,23 @@ def main():
     dataset = us.load_dataset(config)
 
     print("\t making model...")
-    if args["model"] != "" :
-        model = vpers.load(args["model"], vmod.FiberedAE, args["device"])
-    else :
-        #make model
-        model_args = dict(config["model"])
-        model_args.update(
-            dict(
-                x_dim=dataset["shapes"]["input_size"],
-                nb_class=dataset["shapes"]["nb_class"],
-                output_transform=vnnutils.ScaleNonLinearity(-1., 1., dataset["sample_scale"][0], dataset["sample_scale"][1]),
-            )
+    #make model
+    model_args = dict(config["model"])
+    model_args.update(
+        dict(
+            x_dim=dataset["shapes"]["input_size"],
+            nb_class=dataset["shapes"]["nb_class"],
+            output_transform=vnnutils.ScaleNonLinearity(-1., 1., dataset["sample_scale"][0], dataset["sample_scale"][1]),
         )
+    )
+    if args["model"] != "" :
+        model = vpers.load(
+            filename=args["model"],
+            model_class=vmod.FiberedAE,
+            map_location=args["device"],
+            model_args=model_args
+        )
+    else :
         model = vmod.FiberedAE(**model_args)
         model.to(args["device"])
 

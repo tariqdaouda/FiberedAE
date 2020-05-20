@@ -15,14 +15,21 @@ setup(
     This implementation acts as a proof of concept and aims at illustrating the concept""",
     url='',
 
-    author='Anonymous Authors',
+    author='Tariq Daouda, Reda Chhaibi, Prudencio Tossou',
     author_email='',
 
-    license='ApacheV2',
-
+    license='MIT',
+    
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    python_requires='>=3.5',
     classifiers=[
-        'Programming Language :: Python :: 3',
+        "Development Status :: 5 - Production/Stable",
+        "Environment :: Console",
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Healthcare Industry",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3",
     ],
 
     install_requires=["numpy", "scipy", "matplotlib", "holoviews", "torch", "umap-learn", "scanpy", "scgen", "click", "pandas", "scikit-image", "torchvision", "tqdm", "harmonypy"],
@@ -33,7 +40,9 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'sample=sample:main',
+            ['fae = fiberedae.__main__:main'],
         ],
     },
+    package_dir={'fiberedae': 'fiberedae'}
+    # packages=['fiberedae']
 )
