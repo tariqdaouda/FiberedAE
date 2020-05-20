@@ -239,6 +239,7 @@ class Trainer(object):
                 fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
                 fiber_sample = (fiber_sample * 2) - 1
             
+            recons = model.forward_output(samples, condition)
             #TRAIN RECONSTRUCTION   
             if train_reconctruction_freq > 0 and self.meta["current_batch_id"] % train_reconctruction_freq == 0:
                 if self.optimizers["reconstruction"] is not None :

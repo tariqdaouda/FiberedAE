@@ -1,6 +1,14 @@
 {
     "dataset": {
-        "name": "blobs"
+        "name": "blobs",
+        "arguments":{
+            "n_samples": 5000,
+            "nb_class": 6,
+            "nb_dim": 128,
+            "mask_class": true,
+            "dropout_rate": 0.99,
+            "random_state": 1234
+        }
     },
     "trainer": {
         "l_contraction": 0

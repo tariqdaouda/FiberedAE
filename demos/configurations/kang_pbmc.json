@@ -1,10 +1,12 @@
 {
     "dataset": {
         "name": "single_cell",
-        "condition_field": "condition",
-        "dataset_name": "kang pbmc",
-        "filepath": "./datasets/kang_normalized_2khv.h5ad",
-        "backup_url": "https://www.dropbox.com/s/8jq33luekpdnytt/kang_normalized_2khv.h5ad?dl=1"
+        "arguments": {
+            "condition_field": "condition",
+            "dataset_name": "kang pbmc",
+            "filepath": "./datasets/kang_normalized_2khv.h5ad",
+            "backup_url": "https://www.dropbox.com/s/8jq33luekpdnytt/kang_normalized_2khv.h5ad?dl=1"
+        }
     },
     "trainer": {
         "l_contraction": 0
