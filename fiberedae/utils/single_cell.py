@@ -34,6 +34,7 @@ def translate(model, adata, condition_key, ref_condition, condition_encoder, bat
     import torch
     from anndata import AnnData
     from scipy.sparse import issparse
+    from tqdm import trange
 
     if ref_condition:
         ref_condition = condition_encoder.transform( [ref_condition] )[0]
@@ -45,7 +46,7 @@ def translate(model, adata, condition_key, ref_condition, condition_encoder, bat
     else :
         new_x = adata.obsm[X_field].copy()
     
-    for start in range(0, new_x.shape[0], batch_size):
+    for start in trange(0, new_x.shape[0], batch_size):
         stop = start + batch_size
         samples = new_x[start:stop]
         conds = condition_encoder.transform( adata.obs[condition_key][start:stop] )

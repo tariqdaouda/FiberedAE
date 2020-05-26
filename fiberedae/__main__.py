@@ -1,7 +1,6 @@
 import fiberedae.models.fae as vmod
 import fiberedae.utils.basic_trainer as vtrain
 import fiberedae.utils.persistence as vpers
-# import fiberedae.utils.single_cell as vsc
 import fiberedae.utils.datasets as vdatasets
 import fiberedae.utils.useful as us
 
@@ -95,6 +94,8 @@ def main():
 
 def translate_single_cell():
     """Translate a single cell dataset into a reference condition"""
+    import fiberedae.utils.single_cell as vsc
+
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
     parser.add_argument("reference", help="the reference condition to which translation should be made", type=str, action="store")
@@ -110,18 +111,23 @@ def translate_single_cell():
     
     print("\t loading dataset...")
     dataset = us.load_dataset(config)
-
+    
     print("loading model...")
-    loaded = vpers.load_folder(filename, model_class, map_location, model_args=None):
+    model = us.make_fae_model(
+        config=config,
+        dataset=dataset,
+        model_class=vmod.FiberedAE,
+        device = args["device"],
+        model_filename=args["model"]
+    )
 
     print("translating...")
-    
     res = vsc.translate(
-        model = loaded["model"],
-        adata = dataset,
-        condition_key = config["arguments"]["condition_field"],
+        model = model,
+        adata = dataset["adata"],
+        condition_key = config["dataset"]["arguments"]["condition_field"],
         ref_condition = args["reference"],
-        condition_encoder = loaded["encoding"],
+        condition_encoder = dataset["label_encoding"],
         batch_size=args["batch_size"]
     )
 

@@ -48,7 +48,7 @@ def serialize(obj, filename):
         with open(filename, "wb") as fp:
             pickle.dump(obj, fp)
 
-def deserialize(filenamem, map_location="cuda"):
+def deserialize(filename, map_location="cuda"):
     if filename.endswith(".json"):
         with open(filename, "r") as fp:
             obj = json.load(fp)
@@ -76,16 +76,16 @@ def save(
     serialize(model, model_fn)
 
     if training_history:
-        serialize(training_history, filename + "_curves.pkl")
+        serialize(training_history, filename[:-3] + "_curves.pkl")
 
     if meta_data:
-        serialize(meta_data, filename + "_metadata.pkl")
+        serialize(meta_data, filename[:-3] + "_metadata.pkl")
     
     if condition_encoding:
-        serialize(condition_encoding, filename + "_encoding.pkl")
+        serialize(condition_encoding, filename[:-3] + "_encoding.pkl")
     
     if model_args:
-        serialize(model_args, filename + "_args.pkl")
+        serialize(model_args, filename[:-3] + "_args.pkl")
 
 def load(filename, model_class, map_location, model_args=None):
     # if not filename.endswith(".pt"):
@@ -93,7 +93,11 @@ def load(filename, model_class, map_location, model_args=None):
 
     state = deserialize(filename, map_location)
     if not model_args:
-        args = deserialize(filename.replace(".pt", "_args.pkl"))
+        try:
+            args = deserialize(filename.replace(".pt", "_args.pkl"))
+        except Exception as e:
+            print("Unable to load model arguments, please provide them as function arguments")
+            raise e
     else :
         args = model_args
     
@@ -102,14 +106,16 @@ def load(filename, model_class, map_location, model_args=None):
 
     return model
 
-def load_folder(filename, model_class, map_location, model_args=None):
+def load_folder(folder_path, model_class, map_location, model_args=None):
     res = {}
-    res["model"] = load(filename, model_class, map_location, model_args)
+    model_filename = folder_path + "model.pt"
+    res["model"] = load(model_filename, model_class, map_location, model_args)
     for data_type in ["metadata", "curves", 'encoding', "args"]:
+        filename = model_filename[:-3] + "_%s.pkl" % data_type
         try :
-            res[data_type] = deserialize(filename.replace(".pt", "_%s.pkl" % data_type))
+            res[data_type] = deserialize(filename)
         except Exception as e:
-            print ("Unable to load %s because of %s" % (data_type, e))
+            print ("Unable to load %s because of %s" % (filename, e))
             res[data_type] = None
 
     return res
