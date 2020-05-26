@@ -11,6 +11,7 @@ def load_dataset(config):
         "olivetti"    : lambda: vdatasets.load_olivetti(**kwargs),
         "blobs"    : lambda: vdatasets.load_blobs(**kwargs),
         "single_cell"    : lambda: vdatasets.load_single_cell(**kwargs),
+        "scanpy": lambda: vdatasets.load_scanpy(**kwargs)
     }
 
     dataset = datasets.get(config["dataset"]["name"].lower(), lambda: None )()
@@ -57,6 +58,35 @@ def load_configuration(jsonfile, get_original=False):
         return config, bck_json
 
     return config
+
+def make_fae_model(config, dataset, model_class, device="cuda", model_filename=None, output_scaling_base=(-1, 1) ):
+    from . import persistence as vpers
+    from . import nn as vnnutils
+
+    output_transform = None
+    if output_scaling_base:
+        output_transform = vnnutils.ScaleNonLinearity(-1., 1., dataset["sample_scale"][0], dataset["sample_scale"][1])
+
+    model_args = dict(config["model"])
+    model_args.update(
+        dict(
+            x_dim=dataset["shapes"]["input_size"],
+            nb_class=dataset["shapes"]["nb_class"],
+            output_transform=output_transform,
+        )
+    )
+    if model_filename:
+        model = vpers.load(
+            filename=model_filename,
+            model_class=model_class,
+            map_location=device,
+            model_args=model_args
+        )
+    else :
+        model = model_class(**model_args)
+        model.to(device)
+
+    return model
 
 def train(model, dataset, config, nb_epochs):
     trainer = vtrain.Trainer(**config["trainer"])

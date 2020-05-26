@@ -88,8 +88,8 @@ def save(
         serialize(model_args, filename + "_args.pkl")
 
 def load(filename, model_class, map_location, model_args=None):
-    if not filename.endswith(".pt"):
-        raise ValueError("Filename must end with .pt")
+    # if not filename.endswith(".pt"):
+        # raise ValueError("Filename must end with .pt")
 
     state = deserialize(filename, map_location)
     if not model_args:
@@ -101,3 +101,15 @@ def load(filename, model_class, map_location, model_args=None):
     model.load_state_dict(state)
 
     return model
+
+def load_folder(filename, model_class, map_location, model_args=None):
+    res = {}
+    res["model"] = load(filename, model_class, map_location, model_args)
+    for data_type in ["metadata", "curves", 'encoding', "args"]:
+        try :
+            res[data_type] = deserialize(filename.replace(".pt", "_%s.pkl" % data_type))
+        except Exception as e:
+            print ("Unable to load %s because of %s" % (data_type, e))
+            res[data_type] = None
+
+    return res

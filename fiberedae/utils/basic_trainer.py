@@ -386,7 +386,8 @@ class Trainer(object):
         self.hooks["starts"](model, self)
         self.meta["current_epoch_id"] = 0
         try :
-            for epoch in pbar:
+            # for epoch in pbar:
+            for epoch in range(nb_epochs):
                 self.meta["current_epoch_id"] += 1
                 self.hooks["epoch_starts"](model, self)
                 train_loss = self.train(
@@ -403,7 +404,7 @@ class Trainer(object):
                 )
                 self.last_train_loss = train_loss
                 label = ",".join(["%s: %.4f" % ("".join([ss[0]+ss[1] for ss in name.split("_")]), train_loss[name]) for name in train_loss])# * 1000
-                pbar.set_description( label )
+                # pbar.set_description( label )
                 for key in train_loss:
                     # print(key, train_loss[key])
                     self.meta["train_loss_history"][key].append(train_loss[key])

@@ -79,13 +79,16 @@ class AnnDataDataset(torch.utils.data.Dataset):
         self.obs_data = None 
         if self.include_obs :
             self.obs_data = {}
-            for obs_key in self.include_obs:
-                self.obs_data[obs_key] = adata.obs[obs_key].values
-                if self.obs_transforms is not None :
-                    if obs_key in self.obs_transforms:
-                        self.obs_data[obs_key] = self.obs_transforms[obs_key]( self.obs_data[obs_key] )
-                self.obs_data[obs_key] = torch.tensor(self.obs_data[obs_key])
-    
+            if len(self.include_obs) > 0:
+                for obs_key in self.include_obs:
+                    self.obs_data[obs_key] = adata.obs[obs_key].values
+                    if self.obs_transforms is not None :
+                        if obs_key in self.obs_transforms:
+                            self.obs_data[obs_key] = self.obs_transforms[obs_key]( self.obs_data[obs_key] )
+                    self.obs_data[obs_key] = torch.tensor(self.obs_data[obs_key])
+            else :
+                self.obs_data["zeros"] = torch.zeros(self.X_data.shape[0])
+
         if self.oversample_obs_key is not None:
             unique_values = adata.obs[self.oversample_obs_key].unique()
             self.oversample_indexes = {
@@ -248,25 +251,36 @@ def load_olivetti(batch_size):
 
 def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None):
     
-    le = get_label_encoder(adata.obs[condition_field])
-    print(condition_field, adata.obs[condition_field].unique())
-    nb_class = len(le.classes_)
-
-    if oversample:
-        oversample_obs_key = condition_field
-    else:
+    if condition_field:
+        le = get_label_encoder(adata.obs[condition_field])
+        print(condition_field, adata.obs[condition_field].unique())
+        nb_class = len(le.classes_)
+    
+        if oversample:
+            oversample_obs_key = condition_field
+        else:
+            oversample_obs_key = None
+    
+        train_dataset = AnnDataDataset(
+            adata,
+            include_obs=[condition_field],
+            obs_transforms = {
+                condition_field: le.transform
+            },
+            pre_densify=pre_densify,
+            oversample_obs_key=oversample_obs_key,
+            X_field=X_field
+        )
+        batch_formater = lambda x: (x["X_data"], x[condition_field])
+    else :
+        nb_class = 1
         oversample_obs_key = None
-
-    train_dataset = AnnDataDataset(
-        adata,
-        include_obs=[condition_field],
-        obs_transforms = {
-            condition_field: le.transform
-        },
-        pre_densify=pre_densify,
-        oversample_obs_key=oversample_obs_key,
-        X_field=X_field
-    )
+        train_dataset = AnnDataDataset(
+            adata,
+            pre_densify=pre_densify,
+            X_field=X_field
+        )
+        batch_formater = lambda x: (x["X_data"], x["zeros"])
     
     in_size = train_dataset.X_data.shape[1]
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
@@ -292,7 +306,7 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
             "train_size": len(train_dataset),
             "test_size": None,
         },
-        "batch_formater": lambda x: (x["X_data"], x[condition_field]),
+        "batch_formater": batch_formater,
         "label_encoding": le,
         "sample_scale": scale
     }
@@ -349,4 +363,14 @@ def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate
         "sample_scale": (0, 1)
     }
 
+def load_scanpy(dataset_name, condition_field, batch_size, log1p, dataset_args=None):
+    """load dataset from scanpy. """
+    if not dataset_args:
+        adata = getattr(sc.datasets, dataset_name)()
+    else:
+        adata = getattr(sc.datasets, dataset_name)(**dataset_args)
 
+    if log1p:
+        sc.pp.log1p(adata)
+
+    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)

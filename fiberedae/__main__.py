@@ -4,7 +4,6 @@ import fiberedae.utils.persistence as vpers
 # import fiberedae.utils.single_cell as vsc
 import fiberedae.utils.datasets as vdatasets
 import fiberedae.utils.useful as us
-import fiberedae.utils.nn as vnnutils
 
 import argparse
 import random
@@ -38,49 +37,41 @@ def get_quote():
     return "\n".join(ret)
 
 print(get_quote())
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
     parser.add_argument("experiment_name", help="experiment name", type=str, action="store")
     parser.add_argument("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1, action="store")
-    parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default="")
+    parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default=None)
     parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cuda")
-    parser.add_argument("--no_overwrite", help="If true will create an ew folder each time", type=bool, default=True, action="store")
+    parser.add_argument("--no_overwrite", help="If true will create an new folder each time", action="store_false")
     
     args=parser.parse_args().__dict__
 
 
     print("\t creating folder...")
-    exp_folder = get_folder_name(args["experiment_name"], not args["no_overwrite"])
-    os.mkdir(exp_folder)
+    exp_folder = get_folder_name(args["experiment_name"], args["no_overwrite"])
+    try:
+        os.mkdir(exp_folder)
+    except FileExistsError:
+        pass
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
-    print(orig_conf)
-
+    
     print("\t loading dataset...")
     dataset = us.load_dataset(config)
 
     print("\t making model...")
-    #make model
-    model_args = dict(config["model"])
-    model_args.update(
-        dict(
-            x_dim=dataset["shapes"]["input_size"],
-            nb_class=dataset["shapes"]["nb_class"],
-            output_transform=vnnutils.ScaleNonLinearity(-1., 1., dataset["sample_scale"][0], dataset["sample_scale"][1]),
-        )
+
+    model = us.make_fae_model(
+        config=config,
+        dataset=dataset,
+        model_class=vmod.FiberedAE,
+        device = args["device"],
+        model_filename=args["model"]
     )
-    if args["model"] != "" :
-        model = vpers.load(
-            filename=args["model"],
-            model_class=vmod.FiberedAE,
-            map_location=args["device"],
-            model_args=model_args
-        )
-    else :
-        model = vmod.FiberedAE(**model_args)
-        model.to(args["device"])
 
     print("\t training...")
     if args["epochs"] > 0:
@@ -100,8 +91,45 @@ def main():
 
     print("\t saving config...")
     with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
-        json.dump(orig_conf, f)
+        json.dump(orig_conf, f, indent=4)
 
+def translate_single_cell():
+    """Translate a single cell dataset into a reference condition"""
+    parser=argparse.ArgumentParser()
+    parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
+    parser.add_argument("reference", help="the reference condition to which translation should be made", type=str, action="store")
+    parser.add_argument("model", help="load a previously trained model", type=str, action="store", default=None)
+    parser.add_argument("-b", "--batch_size", help="size of the minibatch", type=int, action="store", default=1024)
+    parser.add_argument("-o", "--output", help="the final h5ad name", type=str, default=None, action="store")
+    parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cpu")
+    
+    args=parser.parse_args().__dict__
+
+    print("\t loading configuration...")
+    config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+    
+    print("\t loading dataset...")
+    dataset = us.load_dataset(config)
+
+    print("loading model...")
+    loaded = vpers.load_folder(filename, model_class, map_location, model_args=None):
+
+    print("translating...")
+    
+    res = vsc.translate(
+        model = loaded["model"],
+        adata = dataset,
+        condition_key = config["arguments"]["condition_field"],
+        ref_condition = args["reference"],
+        condition_encoder = loaded["encoding"],
+        batch_size=args["batch_size"]
+    )
+
+    if not args["output"]:
+        args["output"] = args["model"] + "-transref_" + args["reference"] + ".h5ad"
+
+    print("saving result to: %s..." % args["output"])
+    res.write(args["output"])
 
 if __name__ == "__main__" :
     main()
