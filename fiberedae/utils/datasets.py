@@ -76,7 +76,7 @@ class AnnDataDataset(torch.utils.data.Dataset):
         else:
             self.X_data = torch.tensor( self.X_data, dtype=torch.float )
 
-        self.obs_data = None 
+        self.obs_data = {} 
         if self.include_obs :
             self.obs_data = {}
             if len(self.include_obs) > 0:
@@ -86,8 +86,8 @@ class AnnDataDataset(torch.utils.data.Dataset):
                         if obs_key in self.obs_transforms:
                             self.obs_data[obs_key] = self.obs_transforms[obs_key]( self.obs_data[obs_key] )
                     self.obs_data[obs_key] = torch.tensor(self.obs_data[obs_key])
-            else :
-                self.obs_data["zeros"] = torch.zeros(self.X_data.shape[0])
+        else :
+            self.obs_data["zeros"] = torch.zeros(self.X_data.shape[0]).long()
 
         if self.oversample_obs_key is not None:
             unique_values = adata.obs[self.oversample_obs_key].unique()
@@ -114,8 +114,11 @@ class AnnDataDataset(torch.utils.data.Dataset):
         
         sample = { 'X_data': X_data }
         
-        for obs_key in self.include_obs:
-            sample[obs_key] = self.obs_data[obs_key][idx]
+        if self.include_obs :
+            for obs_key in self.include_obs:
+                sample[obs_key] = self.obs_data[obs_key][idx]
+        else:
+            sample["zeros"] = self.obs_data["zeros"][idx]
 
         return sample
 
@@ -250,7 +253,6 @@ def load_olivetti(batch_size):
 
 
 def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None):
-    
     if condition_field:
         le = get_label_encoder(adata.obs[condition_field])
         print(condition_field, adata.obs[condition_field].unique())
@@ -280,7 +282,8 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
             pre_densify=pre_densify,
             X_field=X_field
         )
-        batch_formater = lambda x: (x["X_data"], x["zeros"])
+        batch_formater = lambda x: ( x["X_data"], x["zeros"] )
+        le = lambda x: 0
     
     in_size = train_dataset.X_data.shape[1]
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
@@ -363,14 +366,20 @@ def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate
         "sample_scale": (0, 1)
     }
 
-def load_scanpy(dataset_name, condition_field, batch_size, log1p, dataset_args=None):
+def load_scanpy(scanpy_name, condition_field, batch_size, log1p, project_01= True, scanpy_args=None):
     """load dataset from scanpy. """
-    if not dataset_args:
-        adata = getattr(sc.datasets, dataset_name)()
+    import scanpy as sc
+
+    if not scanpy_args:
+        adata = getattr(sc.datasets, scanpy_name)()
     else:
-        adata = getattr(sc.datasets, dataset_name)(**dataset_args)
+        adata = getattr(sc.datasets, scanpy_name)(**scanpy_args)
 
     if log1p:
         sc.pp.log1p(adata)
+    
+    if project_01:
+        adata.X = adata.X - numpy.min(adata.X)
+        adata.X = adata.X / numpy.max(adata.X)
 
-    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
+    return make_single_cell_dataset(batch_size, condition_field, adata, scanpy_name)

@@ -98,14 +98,14 @@ class Trainer(object):
             # cont = 1/cont 
         return self.l_contraction*cont
 
-    def _train_supervised(self, predictions, targets, criterion, optimizer, contraction, ignore_sample_zeros):
+    def _train_supervised(self, predictions, targets, criterion, optimizer, contraction, ignore_sample_zeros, regularization=0):
         optimizer.zero_grad()
         if ignore_sample_zeros:
             idx = targets != 0
             predictions = predictions[idx] 
             targets = targets[idx] 
 
-        loss = criterion(predictions, targets)
+        loss = criterion(predictions, targets) + regularization
         if contraction:
             cont = self._add_contraction()
             loss += cont
@@ -151,7 +151,7 @@ class Trainer(object):
                 g_optimizer.step()
 
             g_loss = g_loss_fakes.item()
-        
+
         return p_loss, g_loss
 
     def _train_gan(self, model, discriminator, reals, fakes, run_device, g_optimizer, d_optimizer, train_g, train_d):
@@ -160,7 +160,7 @@ class Trainer(object):
 
         g_loss_val = None
         d_loss_val = None
-        
+
         #TRAIN DISCRIMINATOR
         if train_d:
             if d_optimizer:
@@ -184,7 +184,7 @@ class Trainer(object):
                     param.data.clamp_(-0.01, 0.01)
 
             d_loss_val = d_loss.item()
-        
+
         #TRAIN GENERATOR
         if train_g:
             if g_optimizer:
@@ -217,8 +217,9 @@ class Trainer(object):
         cond_adv_sampling=False,
         cond_fitting_sampling=False,
         gan_sampling=False,
+        projection_l1_compactification=0.
     ):
-        
+
         run_device = model.run_device
 
         self.binary_criterion.to(run_device)
@@ -231,31 +232,39 @@ class Trainer(object):
         for batch in train_loader:
             self.hooks["train_pass_starts"](model, self)
 
-            samples, condition = batch_formater(batch)            
+            samples, condition = batch_formater(batch)
             samples = samples.to(run_device)
             condition = condition.to(run_device)
 
             if cond_adv_sampling or cond_fitting_sampling or gan_sampling:
                 fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
                 fiber_sample = (fiber_sample * 2) - 1
-            
+
             recons = model.forward_output(samples, condition)
-            #TRAIN RECONSTRUCTION   
+            #TRAIN RECONSTRUCTION
             if train_reconctruction_freq > 0 and self.meta["current_batch_id"] % train_reconctruction_freq == 0:
                 if self.optimizers["reconstruction"] is not None :
-                    ret, cont = self._train_supervised(recons, samples, self.reconstruction_criterion, self.optimizers["reconstruction"], ignore_sample_zeros=self.ignore_sample_zeros, contraction=True)
+                    ret, cont = self._train_supervised(
+                        recons,
+                        samples,
+                        self.reconstruction_criterion,
+                        self.optimizers["reconstruction"],
+                        ignore_sample_zeros=self.ignore_sample_zeros,
+                        contraction=True,
+                        regularization=self.projection_l1_compactification * torch.sum(model.fiber.weights)
+                    )
                     train_losses["reconstruction"].append(ret)
                     if cont > 0:
                         train_losses["reconstruction_contraction"].append(cont)
-        
-            #TRAIN CONDITION ADVERSARIAL (DANN)   
+
+            #TRAIN CONDITION ADVERSARIAL (DANN)
             if cond_fitting_sampling:
                 # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
                 # fiber_sample = (fiber_sample * 2) - 1
                 recons = model.forward_output(fiber_sample, condition, fiber_input=True)
             else:
                 recons = model.forward_output(samples, condition)
-            
+
             if train_condition_adv_freq > 0 and self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
                 if self.optimizers["condition_adv"] is not None :
                     # model.forward_output(samples, condition)
@@ -288,7 +297,7 @@ class Trainer(object):
 
             self.hooks["train_pass_stops"](model, self)
             self.meta["current_batch_id"] += 1
-            
+
             #TRAIN GAN
             if gan_sampling:
                 gan_fiber = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
@@ -361,6 +370,7 @@ class Trainer(object):
         train_condition_fit_predictor_freq=1,
         train_condition_fit_generator_freq=1,
         gan_sampling=False,
+        projection_l1_compactification=0.,
         test_loader=None
     ):
         from tqdm import trange
@@ -386,8 +396,8 @@ class Trainer(object):
         self.hooks["starts"](model, self)
         self.meta["current_epoch_id"] = 0
         try :
-            # for epoch in pbar:
-            for epoch in range(nb_epochs):
+            for epoch in pbar:
+            # for epoch in range(nb_epochs):
                 self.meta["current_epoch_id"] += 1
                 self.hooks["epoch_starts"](model, self)
                 train_loss = self.train(
@@ -400,7 +410,8 @@ class Trainer(object):
                     train_gan_generator_freq=train_gan_generator_freq,
                     train_condition_fit_predictor_freq=train_condition_fit_predictor_freq,
                     train_condition_fit_generator_freq=train_condition_fit_generator_freq,
-                    gan_sampling=gan_sampling
+                    gan_sampling=gan_sampling,
+                    projection_l1_compactification=projection_l1_compactification
                 )
                 self.last_train_loss = train_loss
                 label = ",".join(["%s: %.4f" % ("".join([ss[0]+ss[1] for ss in name.split("_")]), train_loss[name]) for name in train_loss])# * 1000

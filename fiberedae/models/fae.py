@@ -68,7 +68,7 @@ class MLPClassifier(torch.nn.Module):
     """docstring for MLPClassifier"""
     def __init__(self, x_dim, nb_classes, nb_layers, h_dim, non_linearity, sigmoid_out=False):
         super(MLPClassifier, self).__init__()
-        assert nb_classes > 1
+        assert nb_classes >= 1
 
         if sigmoid_out :
             last_nl = torch.nn.Sigmoid()
@@ -114,6 +114,9 @@ class FiberSpace(torch.nn.Module):
         self.out_dim = fiber_dim
         self.projection_type = projection_type        
         self.projection.apply(init_weights)
+        
+        tensor = torch.Tensor(fiber_dim).fill_(1.)
+        self.weights = torch.nn.Parameter(tensor, dtype=torch.float)
 
     def project(self, x):
         proj = self.projection(x)
@@ -125,6 +128,8 @@ class FiberSpace(torch.nn.Module):
             proj = torch.cat([sin, cos], 1)
         else :
             raise ValueError("Unknown projection type: %s, available: %s" % (projection_type, AVAILABLE_PROJECTION_TYPES) )
+    
+        proj = self.weights * proj
         return proj
 
     def forward(self, x):
