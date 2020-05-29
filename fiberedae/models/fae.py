@@ -115,8 +115,8 @@ class FiberSpace(torch.nn.Module):
         self.projection_type = projection_type        
         self.projection.apply(init_weights)
         
-        tensor = torch.Tensor(fiber_dim).fill_(1.)
-        self.weights = torch.nn.Parameter(tensor, dtype=torch.float)
+        tensor = torch.ones(fiber_dim)
+        self.weights = torch.nn.Parameter(tensor)
 
     def project(self, x):
         proj = self.projection(x)

@@ -251,7 +251,7 @@ class Trainer(object):
                         self.optimizers["reconstruction"],
                         ignore_sample_zeros=self.ignore_sample_zeros,
                         contraction=True,
-                        regularization=self.projection_l1_compactification * torch.sum(model.fiber.weights)
+                        regularization=projection_l1_compactification * torch.sum(model.fiber.weights)
                     )
                     train_losses["reconstruction"].append(ret)
                     if cont > 0:

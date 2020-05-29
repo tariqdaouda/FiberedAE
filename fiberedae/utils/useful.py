@@ -108,6 +108,7 @@ def train(model, dataset, config, nb_epochs):
             train_gan_generator_freq=config["hps"]["train_gan_generator_freq"],
             train_condition_fit_predictor_freq=config["hps"]["train_condition_fit_predictor_freq"],
             train_condition_fit_generator_freq=config["hps"]["train_condition_fit_generator_freq"],
+            projection_l1_compactification=config["hps"].get("projection_l1_compactification", 0.),
             test_loader=None
         )
 
