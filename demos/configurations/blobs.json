@@ -77,7 +77,7 @@
         }
     },
     "hps": {
-        "nb_epochs": 1,
+        "nb_epochs": 100,
         "minibatch_size": 128,
         "train_reconctruction_freq": 1,
         "train_gan_discrimator_freq": 1,

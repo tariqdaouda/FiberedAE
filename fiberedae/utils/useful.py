@@ -4,8 +4,11 @@ import fiberedae.utils.basic_trainer as vtrain
 
 def load_dataset(config):
     kwargs = {"batch_size": config["hps"]["minibatch_size"]}
-    kwargs.update(config["dataset"]["arguments"])
-
+    try:
+        kwargs.update(config["dataset"]["arguments"])
+    except KeyError:
+        pass
+    
     datasets = {
         "mnist"       : lambda: vdatasets.load_mnist(**kwargs),
         "olivetti"    : lambda: vdatasets.load_olivetti(**kwargs),
@@ -34,6 +37,7 @@ def load_configuration(jsonfile, get_original=False):
     """load a json confguration file"""
     import json
     import copy
+    import urllib.request 
 
     non_linearities = {
         "sin": torch.sin,
@@ -41,18 +45,24 @@ def load_configuration(jsonfile, get_original=False):
         "leakyrelu": torch.nn.LeakyReLU()
     }
 
-    bck_json = None
-    with open(jsonfile) as f:
+    if "http" in jsonfile or "ftp" in jsonfile:
+        with urllib.request.urlopen(jsonfile) as url:
+            config = json.loads(url.read().decode())   
+    else :
+        f = open(jsonfile)
         config = json.load(f)
-        if get_original:
-            bck_json = copy.deepcopy(config)
-        
-        for k, v in config["model"].items():
-            if k.find("non_linearity") > -1 :
-                config["model"][k] = non_linearities[v.lower()]
+        f.close()
+    
+    bck_json = None
+    if get_original:
+        bck_json = copy.deepcopy(config)
+    
+    for k, v in config["model"].items():
+        if k.find("non_linearity") > -1 :
+            config["model"][k] = non_linearities[v.lower()]
 
-        for k, v in config["optimizers"].items():
-            config["optimizers"][k] = get_optimizer(config, k)
+    for k, v in config["optimizers"].items():
+        config["optimizers"][k] = get_optimizer(config, k)
 
     if get_original:
         return config, bck_json
