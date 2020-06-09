@@ -40,7 +40,7 @@ print(get_quote())
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
-    parser.add_argument("experiment_name", help="experiment name", type=str, action="store")
+    parser.add_argument("-n", "--experiment_name", help="experiment name", type=str, action="store", default=None)
     parser.add_argument("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1, action="store")
     parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default=None)
     parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cuda")
@@ -48,13 +48,15 @@ def main():
     
     args=parser.parse_args().__dict__
 
-
-    print("\t creating folder...")
-    exp_folder = get_folder_name(args["experiment_name"], args["no_overwrite"])
-    try:
-        os.mkdir(exp_folder)
-    except FileExistsError:
-        pass
+    if not args["experiment_name"] :
+        print("\t creating folder...")
+        exp_folder = get_folder_name(args["experiment_name"], args["no_overwrite"])
+        try:
+            os.mkdir(exp_folder)
+        except FileExistsError:
+            pass
+    else :
+        exp_folder = "."
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
