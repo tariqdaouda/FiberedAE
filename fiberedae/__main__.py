@@ -48,7 +48,7 @@ def main():
     
     args=parser.parse_args().__dict__
 
-    if not args["experiment_name"] :
+    if args["experiment_name"] :
         print("\t creating folder...")
         exp_folder = get_folder_name(args["experiment_name"], args["no_overwrite"])
         try:
