@@ -157,7 +157,7 @@ def raster_reshape(data):
     in_size = data[0].shape[0] * data[0].shape[1]
     return data.view((-1, in_size))[0]
 
-def load_pytorch_image_dataset(name, batch_size, bernoulli_dropout_rate=0):
+def load_pytorch_image_dataset(name, batch_size, bernoulli_dropout_rate=0,num_workers=8):
     from sklearn import preprocessing
 
     train_transforms = torchvision.transforms.Compose([
@@ -179,8 +179,8 @@ def load_pytorch_image_dataset(name, batch_size, bernoulli_dropout_rate=0):
     train_dataset = dataset_fct(root='./dataset_%s/' % name, train=True, transform=train_transforms, download=True)
     test_dataset  = dataset_fct(root='./dataset_%s/' % name, train=False, transform=test_transforms, download=True)
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
     
     nb_class = len(train_dataset.classes)
     le = preprocessing.LabelEncoder()
@@ -210,7 +210,7 @@ def load_pytorch_image_dataset(name, batch_size, bernoulli_dropout_rate=0):
         "sample_scale": (0, 1)
     }
 
-def load_mnist(batch_size, bernoulli_dropout_rate=0):
+def load_mnist(batch_size, bernoulli_dropout_rate=0,num_workers=8):
     return load_pytorch_image_dataset("MNIST", batch_size, bernoulli_dropout_rate)
 
 def load_olivetti(batch_size):
@@ -221,7 +221,7 @@ def load_olivetti(batch_size):
     # train_dataset.images = train_dataset.images - train_dataset.images.mean(axis=0)
     # train_dataset.images -= train_dataset.images.mean(axis=1).reshape(train_dataset.images.shape[0], -1)
     
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     # test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
     
     nb_class = len(train_dataset.classes)
@@ -252,7 +252,7 @@ def load_olivetti(batch_size):
     }
 
 
-def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None):
+def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None,num_workers=8):
     if condition_field:
         le = get_label_encoder(adata.obs[condition_field])
         print(condition_field, adata.obs[condition_field].unique())
@@ -286,7 +286,7 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
         le = lambda x: 0
     
     in_size = train_dataset.X_data.shape[1]
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workerss)
     
     scale = ( torch.max(train_dataset.X_data), torch.min(train_dataset.X_data))
     print("range of sample inputs:", scale)
@@ -319,7 +319,7 @@ def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup
     adata = single_cell.load_10x_dataset(filepath, backup_url=backup_url)
     return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
 
-def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate=0, random_state=1234):
+def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate=0, random_state=1234,num_workers=8):
     """Make a blobs (isotropic gaussians) datasets"""
     from sklearn.datasets import make_blobs
     blobs, targets = make_blobs(n_samples=n_samples, centers=nb_class, n_features=nb_dim, random_state=1234)
@@ -337,7 +337,7 @@ def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate
         torch_targets = torch.zeros_like(torch_targets)
 
     dataset = BasicDataset(torch_blobs, torch_targets)
-    train_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+    train_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
 
     return {
         "name": "Blobs",
