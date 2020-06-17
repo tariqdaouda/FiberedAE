@@ -286,7 +286,7 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
         le = lambda x: 0
     
     in_size = train_dataset.X_data.shape[1]
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workerss)
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     
     scale = ( torch.max(train_dataset.X_data), torch.min(train_dataset.X_data))
     print("range of sample inputs:", scale)

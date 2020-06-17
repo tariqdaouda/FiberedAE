@@ -40,6 +40,9 @@ print(get_quote())
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
+    parser.add_argument("-sci", "--sc_input_file", help="Override the single dataset .h5 definde in the json. Use with care", type=str, action="store")
+    parser.add_argument("-scc", "--sc_condition", help="Override the condition for a single cell dataset. Use with care", type=str, action="store")
+    parser.add_argument("-scb", "--sc_backup", help="Override the backup url for a single cell dataset. Use with care", type=str, action="store")
     parser.add_argument("-n", "--experiment_name", help="experiment name", type=str, action="store", default=None)
     parser.add_argument("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1, action="store")
     parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default=None)
@@ -60,7 +63,12 @@ def main():
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
-    
+    for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
+        if args[arg_key]:
+            print("\t-> Overriding", json_key, "with:", args[arg_key])
+            config["dataset"]["arguments"][json_key] = args[arg_key]
+            orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
+
     print("\t loading dataset...")
     dataset = us.load_dataset(config)
 
