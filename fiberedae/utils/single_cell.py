@@ -5,7 +5,6 @@ import tempfile
 
 import scanpy as sc
 import pandas as pd
-import harmonypy as hpy
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -152,6 +151,12 @@ class BatchcorrectionEvaluator(object):
         return result
     
     def calc_lisi(self, adata, y_field, X_field=None):
+        try :
+            import harmonypy as hpy
+        except :
+            print("Please install harmonypy for lisi score")
+            raise
+        
         if X_field is None :
             X = adata.X
         else :
