@@ -40,7 +40,7 @@ print(get_quote())
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
-    parser.add_argument("-sci", "--sc_input_file", help="Override the single dataset .h5 definde in the json. Use with care", type=str, action="store")
+    parser.add_argument("-sci", "--sc_input_file", help="Override the single cell dataset .h5 defined in the json. Use with care", type=str, action="store")
     parser.add_argument("-scc", "--sc_condition", help="Override the condition for a single cell dataset. Use with care", type=str, action="store")
     parser.add_argument("-scb", "--sc_backup", help="Override the backup url for a single cell dataset. Use with care", type=str, action="store")
     parser.add_argument("-n", "--experiment_name", help="experiment name", type=str, action="store", default=None)
@@ -108,20 +108,41 @@ def translate_single_cell():
 
     parser=argparse.ArgumentParser()
     parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
-    parser.add_argument("reference", help="the reference condition to which translation should be made", type=str, action="store")
     parser.add_argument("model", help="load a previously trained model", type=str, action="store", default=None)
+    parser.add_argument("-r", "--reference", help="the reference condition to which translation should be made. The default is whichever one comes is first", type=str, action="store")
+    parser.add_argument("-d", "--dataset", help="override dataset in config file", type=str, action="store")
     parser.add_argument("-b", "--batch_size", help="size of the minibatch", type=int, action="store", default=1024)
     parser.add_argument("-o", "--output", help="the final h5ad name", type=str, default=None, action="store")
     parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cpu")
+    parser.add_argument("--print_references", help="print available references and exit", action="store_true")
     
     args=parser.parse_args().__dict__
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+    if args["dataset"]:
+        print("\t replacing dataset:\n\t\t%s\n\t\tby:\n\t\t%s" % (config["dataset"]["arguments"]["filepath"], args["dataset"]))
+        config["dataset"]["arguments"]["filepath"] = args["dataset"] 
+        orig_conf["dataset"]["arguments"]["filepath"] = args["dataset"] 
     
     print("\t loading dataset...")
     dataset = us.load_dataset(config)
-    
+    condition_key = config["dataset"]["arguments"]["condition_field"]
+
+    if args["reference"] is None :
+        args["reference"] = dataset["adata"].obs[condition_key].unique()[0]
+
+    if args["print_references"]:
+        print("\tAvailable refrences:")
+        try:
+            print("\t\t", dataset["adata"].obs[condition_key].unique())
+        except Exception as e:
+            try:
+                print("\t\t", dataset["adata"].obsm[condition_key].unique())
+            except Exception as e:
+                raise KeyError("nor obs nor obsm contain field:", condition_key)
+        return
+
     print("loading model...")
     model = us.make_fae_model(
         config=config,
@@ -135,14 +156,15 @@ def translate_single_cell():
     res = vsc.translate(
         model = model,
         adata = dataset["adata"],
-        condition_key = config["dataset"]["arguments"]["condition_field"],
+        condition_key = condition_key,
         ref_condition = args["reference"],
         condition_encoder = dataset["label_encoding"],
         batch_size=args["batch_size"]
     )
 
+    name = config["dataset"]["arguments"]["dataset_name"].replace(" ", "-")
     if not args["output"]:
-        args["output"] = args["model"] + "-transref_" + args["reference"] + ".h5ad"
+        args["output"] =  name + "-ref_" + args["reference"] + ".h5ad"
 
     print("saving result to: %s..." % args["output"])
     res.write(args["output"])

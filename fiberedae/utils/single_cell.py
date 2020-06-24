@@ -1,5 +1,5 @@
 import os
-import numpy
+import numpy as np
 import tarfile
 import tempfile
 
@@ -16,11 +16,16 @@ def load_10x_dataset(filepath, backup_url=None):
     filename = os.path.basename(filepath)
     adata = sc.read(filepath, backup_url=backup_url)
 
+    if np.max(adata.X)/ np.min(adata.X) > 100:
+        print("X does not seem to be logged, logging it!")
+        sc.pp.log1p(adata)
+
     adata.obs["dataset"] = pd.Series()
     adata.obs["dataset"] = filename
     
-    adata.X = adata.X - numpy.min(adata.X)
-    adata.X = adata.X / numpy.max(adata.X)
+    print("Scaling X between [0, 1]")
+    adata.X = adata.X - np.min(adata.X)
+    adata.X = adata.X / np.max(adata.X)
 
     return adata
 
@@ -71,6 +76,31 @@ def translate(model, adata, condition_key, ref_condition, condition_encoder, bat
         ret.obsm[X_field] = new_x
     return ret
 
+def clean_data(model, adata, run_device, fiber_output=False):
+    """
+    Reconstruct the input and cleans it
+    if fiber_output returns fiber layer embeddings instead of reconstruction
+    """
+    import np
+    from tqdm import trange
+    import torch
+    batch_size = 128
+    
+    res = []
+    for start in trange(0, adata.X.shape[0], batch_size):
+        stop = start + batch_size
+        samples = torch.tensor( adata.X[start:stop] )
+        condition = torch.zeros(samples.shape[0], dtype=torch.long)            
+        samples = samples.to(run_device)
+        condition = condition.to(run_device)
+        if fiber_output:
+            recons = model.fiber(samples).detach().cpu().numpy()
+        else:
+            recons = model.forward_output(samples, condition).detach().cpu().numpy()
+        res.append(recons)
+    
+    return np.concatenate(res)
+
 class BatchcorrectionEvaluator(object):
     """Metrics for evaluating single cell sequencing batch correction results"""
     def __init__(self, do_cv=False):
@@ -97,8 +127,8 @@ class BatchcorrectionEvaluator(object):
         def variance( x ):
             count  = x.shape[0]
             dim    = x.shape[1]
-            mean   = numpy.mean( x, axis=0).reshape( (1,dim) )
-            result = numpy.mean( numpy.linalg.norm(x - numpy.ones( (count,1) )*mean, axis=1)**2 )
+            mean   = np.mean( x, axis=0).reshape( (1,dim) )
+            result = np.mean( np.linalg.norm(x - np.ones( (count,1) )*mean, axis=1)**2 )
             return result
         
         if X_field is None :
@@ -113,7 +143,7 @@ class BatchcorrectionEvaluator(object):
         dim   = len(X[0])
         #
         # Compute total variance
-        mean          = numpy.mean( X, axis=0)
+        mean          = np.mean( X, axis=0)
         var           = variance(X)
         result["var"] = var
         #
@@ -122,7 +152,7 @@ class BatchcorrectionEvaluator(object):
         # Indices for each group
         group_indices = [None]*len( group_ids )
         for index in range( len(group_indices) ):
-            group_indices[index] = numpy.where( y == group_ids[index] )[0]
+            group_indices[index] = np.where( y == group_ids[index] )[0]
         #
         # Mean and intra-group variance for each group
         group_means   = [None]*len( group_ids )
@@ -130,9 +160,9 @@ class BatchcorrectionEvaluator(object):
         group_inertia = [None]*len( group_ids )
         for index in range( len(group_indices) ):
             data = X[ group_indices[index] ]
-            m    = numpy.mean( data, axis=0 )
+            m    = np.mean( data, axis=0 )
             v    = variance( data )
-            i    = numpy.linalg.norm( m - mean )**2
+            i    = np.linalg.norm( m - mean )**2
             group_means  [index] = m
             group_vars   [index] = v
             group_inertia[index] = i
@@ -165,7 +195,7 @@ class BatchcorrectionEvaluator(object):
     
         lisi = hpy.compute_lisi(X, adata.obs, [y_field])
         vals = lisi[:, 0]
-        ret = {"mean": numpy.mean(vals), "std": numpy.std(vals)}
+        ret = {"mean": np.mean(vals), "std": np.std(vals)}
         return ret
 
     def calc_batch_accuracy(self, adata, y_field, X_field=None, classifier="logreg"):
@@ -179,11 +209,11 @@ class BatchcorrectionEvaluator(object):
 
         if classifier.lower() == "logreg" :
             clf = LogisticRegression(class_weight="balanced", multi_class='auto', solver="lbfgs")
-            parameters = {'C': numpy.logspace(-2, 1, 20)}
+            parameters = {'C': np.logspace(-2, 1, 20)}
         elif classifier.lower() == "svc" :
             clf = SVC(kernel='rbf', class_weight="balanced")
-            parameters = {'C': numpy.logspace(-2, 1, 20),
-                          'gamma': numpy.logspace(-2, 2, 10).tolist() + ['auto', 'scale']}
+            parameters = {'C': np.logspace(-2, 1, 20),
+                          'gamma': np.logspace(-2, 2, 10).tolist() + ['auto', 'scale']}
         elif classifier.lower() == "rf":
             clf = RandomForestClassifier(n_estimators=500, class_weight="balanced", n_jobs=-1)
             parameters = {}
