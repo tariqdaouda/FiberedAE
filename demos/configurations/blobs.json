@@ -3,7 +3,7 @@
         "name": "blobs",
         "arguments":{
             "n_samples": 5000,
-            "nb_class": 6,
+            "nb_class": 5,
             "nb_dim": 128,
             "mask_class": true,
             "dropout_rate": 0.99,

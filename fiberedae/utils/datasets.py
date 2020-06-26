@@ -316,6 +316,7 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
 
 def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup_url=None):
     from . import single_cell
+    print("Opening SC dataset:", filepath)
     adata = single_cell.load_10x_dataset(filepath, backup_url=backup_url)
     return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
 
