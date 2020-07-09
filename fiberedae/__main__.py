@@ -228,7 +228,7 @@ def clean_single_cell(model, adata, run_device):
         args["output"] =  name + "-fae-cleaned.h5ad"
 
     print("saving result to: %s..." % args["output"])
-    res.write(args["output"])
+    adata.write(args["output"])
 
 if __name__ == "__main__" :
     main()
