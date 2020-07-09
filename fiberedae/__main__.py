@@ -4,11 +4,11 @@ import fiberedae.utils.persistence as vpers
 import fiberedae.utils.datasets as vdatasets
 import fiberedae.utils.useful as us
 
-import argparse
+# import argparse
 import random
 import os
 import json
-
+import click
 
 def get_folder_name(folder, overwrite):
     import time
@@ -35,25 +35,25 @@ def get_quote():
     ret.append(sep)
     return "\n".join(ret)
 
-print(get_quote())
-
+@click.group()
 def main():
-    parser=argparse.ArgumentParser()
-    parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
-    parser.add_argument("-sci", "--sc_input_file", help="Override the single cell dataset .h5 defined in the json. Use with care", type=str, action="store")
-    parser.add_argument("-scc", "--sc_condition", help="Override the condition for a single cell dataset. Use with care", type=str, action="store")
-    parser.add_argument("-scb", "--sc_backup", help="Override the backup url for a single cell dataset. Use with care", type=str, action="store")
-    parser.add_argument("-n", "--experiment_name", help="experiment name", type=str, action="store", default=None)
-    parser.add_argument("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1, action="store")
-    parser.add_argument("-m", "--model", help="load a previously trained model", type=str, action="store", default=None)
-    parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cuda")
-    parser.add_argument("--no_overwrite", help="If true will create an new folder each time", action="store_false")
-    
-    args=parser.parse_args().__dict__
+    click.echo(get_quote())
 
+@main.command()
+@click.argument("configuration_file")
+@click.option("-sci", "--sc_input_file", help="Override the single cell dataset .h5 defined in the json. Use with care", type=click.File('rb'))
+@click.option("-scc", "--sc_condition", help="Override the condition for a single cell dataset. Use with care")
+@click.option("-scb", "--sc_backup", help="Override the backup url for a single cell dataset. Use with care")
+@click.option("-n", "--experiment_name", help="experiment name", default=None)
+@click.option("-e", "--epochs", help="bypass epochs value in configuration", type=int, default=-1)
+@click.option("-m", "--model", help="load a previously trained model", default=None)
+@click.option("--device", help="cpu, cuda, ...", type=str, default="cuda")
+@click.option("--overwrite/--no_overwrite", default=False)
+def train(**args):
+    print(args)
     if args["experiment_name"] :
         print("\t creating folder...")
-        exp_folder = get_folder_name(args["experiment_name"], args["no_overwrite"])
+        exp_folder = get_folder_name(args["experiment_name"], args["overwrite"])
         try:
             os.mkdir(exp_folder)
         except FileExistsError:
@@ -102,21 +102,18 @@ def main():
     with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
         json.dump(orig_conf, f, indent=4)
 
-def translate_single_cell():
+@main.command()
+@click.argument("configuration_file")
+@click.argument("model", default=None)
+@click.option("-r", "--reference", help="the reference condition to which translation should be made. The default is whichever one comes is first")
+@click.option("-d", "--dataset", help="override dataset in config file")
+@click.option("-b", "--batch_size", help="size of the minibatch", default=1024)
+@click.option("-o", "--output", help="the final h5ad name")
+@click.option("--device", help="cpu, cuda, ...", default="cpu")
+@click.option("--print_references", help="print available references and exit")
+def translate_single_cell(**args):
     """Translate a single cell dataset into a reference condition"""
     import fiberedae.utils.single_cell as vsc
-
-    parser=argparse.ArgumentParser()
-    parser.add_argument("configuration_file", help="load the configuration file", type=str, action="store")
-    parser.add_argument("model", help="load a previously trained model", type=str, action="store", default=None)
-    parser.add_argument("-r", "--reference", help="the reference condition to which translation should be made. The default is whichever one comes is first", type=str, action="store")
-    parser.add_argument("-d", "--dataset", help="override dataset in config file", type=str, action="store")
-    parser.add_argument("-b", "--batch_size", help="size of the minibatch", type=int, action="store", default=1024)
-    parser.add_argument("-o", "--output", help="the final h5ad name", type=str, default=None, action="store")
-    parser.add_argument("--device", help="cpu, cuda, ...", type=str, default="cpu")
-    parser.add_argument("--print_references", help="print available references and exit", action="store_true")
-    
-    args=parser.parse_args().__dict__
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
@@ -162,9 +159,73 @@ def translate_single_cell():
         batch_size=args["batch_size"]
     )
 
+    print("adding X_fae...")
+    ret = vsc.reconstruct(
+        model = model,
+        adata = dataset["adata"],
+        run_device = device,
+        batch_size=args["batch_size"],
+        clean_output = False,
+        fiber_output = True
+    )
+    res.obsm["X_fae"] = ret["X_fiber"]
+
     name = config["dataset"]["arguments"]["dataset_name"].replace(" ", "-")
     if not args["output"]:
         args["output"] =  name + "-ref_" + args["reference"] + ".h5ad"
+
+    print("saving result to: %s..." % args["output"])
+    res.write(args["output"])
+
+@main.command()
+@click.argument("configuration_file")
+@click.argument("model", default=None)
+@click.option("-b", "--batch_size", help="size of the minibatch", default=128)
+@click.option("-o", "--output", help="the final h5ad name")
+@click.option("--device", help="cpu, cuda, ...", default="cpu")
+def clean_single_cell(model, adata, run_device):
+    """
+    Reconstruct the input and cleans it
+    if fiber_output returns fiber layer embeddings instead of reconstruction
+    """
+    import fiberedae.utils.single_cell as vsc
+
+    print("\t loading configuration...")
+    config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+    if args["dataset"]:
+        print("\t replacing dataset:\n\t\t%s\n\t\tby:\n\t\t%s" % (config["dataset"]["arguments"]["filepath"], args["dataset"]))
+        config["dataset"]["arguments"]["filepath"] = args["dataset"] 
+        orig_conf["dataset"]["arguments"]["filepath"] = args["dataset"] 
+
+    print("\t loading dataset...")
+    dataset = us.load_dataset(config)
+    condition_key = config["dataset"]["arguments"]["condition"]
+
+    print("loading model...")
+    model = us.make_fae_model(
+        config=config,
+        dataset=dataset,
+        model_class=vmod.FiberedAE,
+        device = args["device"],
+        model_filename=args["model"]
+    )
+
+    print("cleaning...")
+    ret = vsc.reconstruct(
+        model = model,
+        adata = dataset["adata"],
+        run_device = device,
+        batch_size=args["batch_size"],
+        clean_output = True,
+        fiber_output = True
+    )
+
+    adata.X = ret["X"]
+    adata.obsm["X_fae"] = ret["X_fiber"]
+
+    name = config["dataset"]["arguments"]["dataset_name"].replace(" ", "-")
+    if not args["output"]:
+        args["output"] =  name + "-fae-cleaned.h5ad"
 
     print("saving result to: %s..." % args["output"])
     res.write(args["output"])

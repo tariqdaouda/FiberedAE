@@ -76,7 +76,7 @@ def translate(model, adata, condition_key, ref_condition, condition_encoder, bat
         ret.obsm[X_field] = new_x
     return ret
 
-def clean_data(model, adata, run_device, fiber_output=False):
+def reconstruct(model, adata, run_device, batch_size=128, cleaned_output=True, fiber_output=False):
     """
     Reconstruct the input and cleans it
     if fiber_output returns fiber layer embeddings instead of reconstruction
@@ -84,22 +84,34 @@ def clean_data(model, adata, run_device, fiber_output=False):
     import np
     from tqdm import trange
     import torch
-    batch_size = 128
     
     res = []
+    res_fiber = []
     for start in trange(0, adata.X.shape[0], batch_size):
         stop = start + batch_size
         samples = torch.tensor( adata.X[start:stop] )
         condition = torch.zeros(samples.shape[0], dtype=torch.long)            
         samples = samples.to(run_device)
         condition = condition.to(run_device)
+        
         if fiber_output:
-            recons = model.fiber(samples).detach().cpu().numpy()
-        else:
+            recons_fiber = model.fiber(samples).detach().cpu().numpy()
+            res_fiber.append(recons_fiber)
+        
+        if cleaned_output:
             recons = model.forward_output(samples, condition).detach().cpu().numpy()
-        res.append(recons)
+            res.append(recons)
     
-    return np.concatenate(res)
+    ret = {}
+    if fiber_output:
+        ret["X_fiber"] = np.concatenate(res_fiber)
+
+    if cleaned_output 
+        ret["X"] = np.concatenate(res)
+
+    return ret
+
+clean = reconstruct
 
 class BatchcorrectionEvaluator(object):
     """Metrics for evaluating single cell sequencing batch correction results"""
