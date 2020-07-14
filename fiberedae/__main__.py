@@ -163,7 +163,7 @@ def translate_single_cell(**args):
     ret = vsc.reconstruct(
         model = model,
         adata = dataset["adata"],
-        run_device = device,
+        run_device = args["device"],
         batch_size=args["batch_size"],
         clean_output = False,
         fiber_output = True
