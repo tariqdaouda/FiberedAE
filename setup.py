@@ -41,8 +41,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            ['fae = fiberedae.__main__:main'],
-            ['fae-translate-sc = fiberedae.__main__:translate_single_cell']
+            ['fae = fiberedae.__main__:main']
         ],
     },
     package_dir={'fiberedae': 'fiberedae'}

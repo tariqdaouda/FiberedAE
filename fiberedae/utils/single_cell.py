@@ -81,7 +81,7 @@ def reconstruct(model, adata, run_device, batch_size=128, cleaned_output=True, f
     Reconstruct the input and cleans it
     if fiber_output returns fiber layer embeddings instead of reconstruction
     """
-    import np
+    import numpy as np
     from tqdm import trange
     import torch
     
@@ -106,7 +106,7 @@ def reconstruct(model, adata, run_device, batch_size=128, cleaned_output=True, f
     if fiber_output:
         ret["X_fiber"] = np.concatenate(res_fiber)
 
-    if cleaned_output 
+    if cleaned_output :
         ret["X"] = np.concatenate(res)
 
     return ret
