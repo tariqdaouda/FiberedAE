@@ -85,11 +85,12 @@ def reconstruct(model, adata, run_device, batch_size=128, cleaned_output=True, f
     from tqdm import trange
     import torch
     
+    X = adata.X.todense()
     res = []
     res_fiber = []
-    for start in trange(0, adata.X.shape[0], batch_size):
+    for start in trange(0, X.shape[0], batch_size):
         stop = start + batch_size
-        samples = torch.tensor( adata.X[start:stop] )
+        samples = torch.tensor( X[start:stop] )
         condition = torch.zeros(samples.shape[0], dtype=torch.long)            
         samples = samples.to(run_device)
         condition = condition.to(run_device)
