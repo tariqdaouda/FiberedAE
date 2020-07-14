@@ -165,7 +165,7 @@ def translate_single_cell(**args):
         adata = dataset["adata"],
         run_device = args["device"],
         batch_size=args["batch_size"],
-        clean_output = False,
+        cleaned_output = False,
         fiber_output = True
     )
     res.obsm["X_fae"] = ret["X_fiber"]
