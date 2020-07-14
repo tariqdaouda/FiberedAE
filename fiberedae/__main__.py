@@ -168,7 +168,7 @@ def translate_single_cell(**args):
     #     cleaned_output = False,
     #     fiber_output = True
     # )
-    res.obsm["X_fae"] = ret["X_fiber"]
+    # res.obsm["X_fae"] = ret["X_fiber"]
 
     name = config["dataset"]["arguments"]["dataset_name"].replace(" ", "-")
     if not args["output"]:
