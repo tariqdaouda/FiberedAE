@@ -159,15 +159,15 @@ def translate_single_cell(**args):
         batch_size=args["batch_size"]
     )
 
-    print("adding X_fae...")
-    ret = vsc.reconstruct(
-        model = model,
-        adata = dataset["adata"],
-        run_device = args["device"],
-        batch_size=args["batch_size"],
-        cleaned_output = False,
-        fiber_output = True
-    )
+    # print("adding X_fae...")
+    # ret = vsc.reconstruct(
+    #     model = model,
+    #     adata = dataset["adata"],
+    #     run_device = args["device"],
+    #     batch_size=args["batch_size"],
+    #     cleaned_output = False,
+    #     fiber_output = True
+    # )
     res.obsm["X_fae"] = ret["X_fiber"]
 
     name = config["dataset"]["arguments"]["dataset_name"].replace(" ", "-")
