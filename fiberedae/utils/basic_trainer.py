@@ -418,7 +418,8 @@ class Trainer(object):
                 # pbar.set_description( label )
                 for key in train_loss:
                     # print(key, train_loss[key])
-                    self.meta["train_loss_history"][key].append(train_loss[key])
+                    # self.meta["train_loss_history"][key].append(train_loss[key])
+                    self.meta["train_loss_history"][key].append(train_loss[key].cpu().numpy())
                 if test_loader:
                     die
                     test_loss = self.test(model, test_loader, batch_formater, run_device)
