@@ -41,7 +41,7 @@ def main():
 
 @main.command()
 @click.argument("configuration_file")
-@click.option("-sci", "--sc_input_file", help="Override the single cell dataset .h5 defined in the json. Use with care", type=click.File('rb'))
+@click.option("-sci", "--sc_input_file", help="Override the single cell dataset .h5 defined in the json. Use with care")
 @click.option("-scc", "--sc_condition", help="Override the condition for a single cell dataset. Use with care")
 @click.option("-scb", "--sc_backup", help="Override the backup url for a single cell dataset. Use with care")
 @click.option("-n", "--experiment_name", help="experiment name", default=None)
