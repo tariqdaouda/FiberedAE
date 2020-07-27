@@ -35,6 +35,6 @@ You may also need to install ipywidgets for progress bars to work.
 
 After installation a CLI will be available for training, integration etc.... run:
 
-```fae help```
+```fae --help```
 
 for more details.
