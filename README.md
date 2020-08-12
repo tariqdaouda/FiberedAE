@@ -30,3 +30,11 @@ If you are running miniconda and want to run the notebooks, you further need to 
 You may also need to install ipywidgets for progress bars to work.
 
 ```conda install -c conda-forge ipywidgets```
+
+## Running it
+
+After installation a CLI will be available for training, integration etc.... run:
+
+```fae --help```
+
+for more details.
