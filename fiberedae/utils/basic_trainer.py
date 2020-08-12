@@ -258,45 +258,46 @@ class Trainer(object):
                         train_losses["reconstruction_contraction"].append(cont)
 
             #TRAIN CONDITION ADVERSARIAL (DANN)
-            if cond_fitting_sampling:
-                # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
-                # fiber_sample = (fiber_sample * 2) - 1
-                recons = model.forward_output(fiber_sample, condition, fiber_input=True)
-            else:
-                recons = model.forward_output(samples, condition)
+            if model.conditioned :
+                if cond_fitting_sampling:
+                    # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                    # fiber_sample = (fiber_sample * 2) - 1
+                    recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+                else:
+                    recons = model.forward_output(samples, condition)
 
-            if train_condition_adv_freq > 0 and self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
-                if self.optimizers["condition_adv"] is not None :
-                    # model.forward_output(samples, condition)
-                    condition_adv = model.predict_fiber_condition()
-                    ret, cont = self._train_classifier(model.nb_class, condition_adv, condition, self.optimizers["condition_adv"], contraction=True)
-                    train_losses["condition_adv"].append(ret)
-                    if cont > 0:
-                        train_losses["condition_adv_contraction"].append(cont)
+                if train_condition_adv_freq > 0 and self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
+                    if self.optimizers["condition_adv"] is not None :
+                        # model.forward_output(samples, condition)
+                        condition_adv = model.predict_fiber_condition()
+                        ret, cont = self._train_classifier(model.nb_class, condition_adv, condition, self.optimizers["condition_adv"], contraction=True)
+                        train_losses["condition_adv"].append(ret)
+                        if cont > 0:
+                            train_losses["condition_adv_contraction"].append(cont)
 
-            #TRAIN CONDITION FITING PREDICTOR   
-            if gan_sampling:
-                # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
-                # fiber_sample = (fiber_sample * 2) - 1
-                recons = model.forward_output(fiber_sample, condition, fiber_input=True)
-            else:
-                recons = model.forward_output(samples, condition)
-            p_loss, g_loss = self._train_condition_prediction(
-                classifier=model.predict_condition,
-                nb_class=model.nb_class,
-                reals=samples,
-                fakes=recons,
-                targets=condition,
-                p_optimizer=self.optimizers["prediction"],
-                g_optimizer=self.optimizers["condition_fit_generator"],
-                train_p = train_condition_fit_predictor_freq> 0 and (self.meta["current_batch_id"] % train_condition_fit_predictor_freq == 0),
-                train_g = train_condition_fit_generator_freq > 0 and (self.meta["current_batch_id"] % train_condition_fit_generator_freq == 0)
-            )
-            if p_loss: train_losses["prediction"].append(p_loss)
-            if g_loss: train_losses["condition_fit_generator"].append(g_loss)
+                #TRAIN CONDITION FITING PREDICTOR
+                if gan_sampling:
+                    # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                    # fiber_sample = (fiber_sample * 2) - 1
+                    recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+                else:
+                    recons = model.forward_output(samples, condition)
+                p_loss, g_loss = self._train_condition_prediction(
+                    classifier=model.predict_condition,
+                    nb_class=model.nb_class,
+                    reals=samples,
+                    fakes=recons,
+                    targets=condition,
+                    p_optimizer=self.optimizers["prediction"],
+                    g_optimizer=self.optimizers["condition_fit_generator"],
+                    train_p = train_condition_fit_predictor_freq> 0 and (self.meta["current_batch_id"] % train_condition_fit_predictor_freq == 0),
+                    train_g = train_condition_fit_generator_freq > 0 and (self.meta["current_batch_id"] % train_condition_fit_generator_freq == 0)
+                )
+                if p_loss: train_losses["prediction"].append(p_loss)
+                if g_loss: train_losses["condition_fit_generator"].append(g_loss)
 
-            self.hooks["train_pass_stops"](model, self)
-            self.meta["current_batch_id"] += 1
+                self.hooks["train_pass_stops"](model, self)
+                self.meta["current_batch_id"] += 1
 
             #TRAIN GAN
             if gan_sampling:
@@ -415,7 +416,7 @@ class Trainer(object):
                 )
                 self.last_train_loss = train_loss
                 label = ",".join(["%s: %.4f" % ("".join([ss[0]+ss[1] for ss in name.split("_")]), train_loss[name]) for name in train_loss])# * 1000
-                # pbar.set_description( label )
+                pbar.set_description( label )
                 for key in train_loss:
                     # print(key, train_loss[key])
                     # self.meta["train_loss_history"][key].append(train_loss[key])

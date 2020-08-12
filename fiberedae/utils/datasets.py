@@ -210,10 +210,10 @@ def load_pytorch_image_dataset(name, batch_size, bernoulli_dropout_rate=0,num_wo
         "sample_scale": (0, 1)
     }
 
-def load_mnist(batch_size, bernoulli_dropout_rate=0,num_workers=8):
+def load_mnist(batch_size, bernoulli_dropout_rate=0, num_workers=8):
     return load_pytorch_image_dataset("MNIST", batch_size, bernoulli_dropout_rate)
 
-def load_olivetti(batch_size):
+def load_olivetti(batch_size, num_workers=8):
     from sklearn.datasets import fetch_olivetti_faces
     from sklearn import preprocessing
 
@@ -367,7 +367,7 @@ def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate
         "sample_scale": (0, 1)
     }
 
-def load_scanpy(scanpy_name, condition_field, batch_size, log1p, project_01= True, scanpy_args=None):
+def load_scanpy(scanpy_name, condition_field, batch_size, log1p, normalize= True, scanpy_args=None):
     """load dataset from scanpy. """
     import scanpy as sc
 
@@ -379,8 +379,24 @@ def load_scanpy(scanpy_name, condition_field, batch_size, log1p, project_01= Tru
     if log1p:
         sc.pp.log1p(adata)
     
-    if project_01:
+    if normalize:
         adata.X = adata.X - numpy.min(adata.X)
         adata.X = adata.X / numpy.max(adata.X)
 
     return make_single_cell_dataset(batch_size, condition_field, adata, scanpy_name)
+
+def load_scvelo(scvelo_name, condition_field, batch_size, log1p, normalize= True):
+    """load dataset from sc velocity. """
+    import scanpy as sc
+    import scvelo as scv
+
+    adata = getattr(scv.datasets, scvelo_name)()
+
+    if log1p:
+        sc.pp.log1p(adata)
+    
+    if normalize:
+        adata.X = adata.X - numpy.min(adata.X)
+        adata.X = adata.X / numpy.max(adata.X)
+
+    return make_single_cell_dataset(batch_size, condition_field, adata, scvelo_name)
