@@ -7,7 +7,7 @@ here = path.abspath(path.dirname(__file__))
 setup(
     name='fiberedae',
 
-    version='0.01',
+    version='0.2',
 
     description='Implementation of Fibered Auto Encoders (FAE)',
     long_description=""" Implementation of Fibered Auto Encoders (FAE).

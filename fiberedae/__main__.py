@@ -77,7 +77,6 @@ def train(**args):
     dataset = us.load_dataset(config)
 
     print("\t making model...")
-
     model = us.make_fae_model(
         config=config,
         dataset=dataset,
