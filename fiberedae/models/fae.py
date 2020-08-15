@@ -262,7 +262,7 @@ class FiberedAE(torch.nn.Module):
         self.nb_class= nb_class
 
         self.non_linearity = non_linearity
-        self.run_device = "cpu"
+        # self.run_device = "cpu"
 
         self.fiber_grads = None
         self.conditioned = conditioned
@@ -281,13 +281,15 @@ class FiberedAE(torch.nn.Module):
         tensor.retain_grad()
         tensor.register_hook(_hook)
 
-    def to(self, device, *args, **kwargs):
-        self.run_device = device
-        super(FiberedAE, self).to(self.run_device, *args, **kwargs)
-        print("running on: %s" % self.run_device)
-    
-    def cuda(self, *args, **kwargs):
-        self.to("cuda", *args, **kwargs)
+    # def to(self, device, *args, **kwargs):
+    #     print("----", device)
+    #     self.run_device = device
+    #     print(args, kwargs)
+    #     super(FiberedAE, self).to(self.run_device, *args, **kwargs)
+    #     print("running on: %s" % self.run_device)
+            
+    # def cuda(self, *args, **kwargs):
+    #     self.to("cuda", *args, **kwargs)
     
     def condition(self, cond):
         # Bug fix: https://github.com/ictnlp-wshugen/annotated-transformer_codes/commit/ffe3bcc2665fbe5a7f1d53ca8819b1a455903cb8

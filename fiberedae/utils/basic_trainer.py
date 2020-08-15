@@ -54,7 +54,7 @@ class SaveBest(object):
 
 class Trainer(object):
     """docstring for Trainer"""
-    def __init__(self, l_contraction, ignore_sample_zeros=False):
+    def __init__(self, l_contraction, run_device="cuda", ignore_sample_zeros=False):
         super(Trainer, self).__init__()
         self.hooks = {
             "starts": TrainerHooks(),
@@ -82,6 +82,16 @@ class Trainer(object):
         self.ignore_sample_zeros = ignore_sample_zeros
         self.optimizers = None
         self.model = None
+        self.run_device = run_device
+
+        print("->Trainer runing on:", run_device)
+
+    def get_model_attr_accessor(self, model):
+        if isinstance(model, torch.nn.DataParallel):
+            attr_access = model.module
+        else:
+            attr_access = model    
+        return attr_access
 
     def hook(self, position, hooks):
         if position not in self.hooks:
@@ -161,6 +171,8 @@ class Trainer(object):
         g_loss_val = None
         d_loss_val = None
 
+        attr_access = self.get_model_attr_accessor(model)
+
         #TRAIN DISCRIMINATOR
         if train_d:
             if d_optimizer:
@@ -168,7 +180,7 @@ class Trainer(object):
     
             pred_fakes = discriminator(fakes.detach())
             pred_reals = discriminator(reals)
-            if model.wgan:
+            if attr_access.wgan:
                 d_loss = -torch.mean(pred_reals) + torch.mean(pred_fakes)
             else :
                 d_loss_fakes = self.binary_criterion(pred_fakes, targets_fake)
@@ -179,8 +191,8 @@ class Trainer(object):
                 d_loss.backward()
                 d_optimizer.step()
 
-            if model.wgan:
-                for param in model.output_gan_discriminator.parameters():
+            if attr_access.wgan:
+                for param in attr_access.output_gan_discriminator.parameters():
                     param.data.clamp_(-0.01, 0.01)
 
             d_loss_val = d_loss.item()
@@ -191,7 +203,7 @@ class Trainer(object):
                 g_optimizer.zero_grad()
     
             pred = discriminator(fakes)
-            if model.wgan:
+            if attr_access.wgan:
                 g_loss = -torch.mean(pred)
             else:
                 g_loss = self.binary_criterion(pred, targets_real)
@@ -217,14 +229,16 @@ class Trainer(object):
         cond_adv_sampling=False,
         cond_fitting_sampling=False,
         gan_sampling=False,
-        projection_l1_compactification=0.
+        projection_l1_compactification=0.,
     ):
 
-        run_device = model.run_device
+        # run_device = run_device#model.run_device
+        
+        attr_access = self.get_model_attr_accessor(model)
 
-        self.binary_criterion.to(run_device)
-        self.multiclass_criterion.to(run_device)
-        self.reconstruction_criterion.to(run_device)
+        self.binary_criterion.to(self.run_device)
+        self.multiclass_criterion.to(self.run_device)
+        self.reconstruction_criterion.to(self.run_device)
 
         model.train()
         train_losses = defaultdict(list)
@@ -233,14 +247,14 @@ class Trainer(object):
             self.hooks["train_pass_starts"](model, self)
 
             samples, condition = batch_formater(batch)
-            samples = samples.to(run_device)
-            condition = condition.to(run_device)
+            samples = samples.to(self.run_device)
+            condition = condition.to(self.run_device)
 
             if cond_adv_sampling or cond_fitting_sampling or gan_sampling:
-                fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                fiber_sample = torch.rand( size = (samples.size(0), attr_access.fiber_space.out_dim) ).to(self.run_device)
                 fiber_sample = (fiber_sample * 2) - 1
 
-            recons = model.forward_output(samples, condition)
+            recons = attr_access.forward_output(samples, condition)
             #TRAIN RECONSTRUCTION
             if train_reconctruction_freq > 0 and self.meta["current_batch_id"] % train_reconctruction_freq == 0:
                 if self.optimizers["reconstruction"] is not None :
@@ -251,40 +265,40 @@ class Trainer(object):
                         self.optimizers["reconstruction"],
                         ignore_sample_zeros=self.ignore_sample_zeros,
                         contraction=True,
-                        regularization=projection_l1_compactification * torch.sum(model.fiber.weights)
+                        regularization=projection_l1_compactification * torch.sum(attr_access.fiber.weights)
                     )
                     train_losses["reconstruction"].append(ret)
                     if cont > 0:
                         train_losses["reconstruction_contraction"].append(cont)
 
             #TRAIN CONDITION ADVERSARIAL (DANN)
-            if model.conditioned :
+            if attr_access.conditioned :
                 if cond_fitting_sampling:
-                    # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                    # fiber_sample = torch.rand( size = (samples.size(0), attr_access.fiber_space.out_dim) ).to(self.run_device)
                     # fiber_sample = (fiber_sample * 2) - 1
-                    recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+                    recons = attr_access.forward_output(fiber_sample, condition, fiber_input=True)
                 else:
-                    recons = model.forward_output(samples, condition)
+                    recons = attr_access.forward_output(samples, condition)
 
                 if train_condition_adv_freq > 0 and self.meta["current_batch_id"] % train_condition_adv_freq == 0 :
                     if self.optimizers["condition_adv"] is not None :
-                        # model.forward_output(samples, condition)
-                        condition_adv = model.predict_fiber_condition()
-                        ret, cont = self._train_classifier(model.nb_class, condition_adv, condition, self.optimizers["condition_adv"], contraction=True)
+                        # attr_access.forward_output(samples, condition)
+                        condition_adv = attr_access.predict_fiber_condition()
+                        ret, cont = self._train_classifier(attr_access.nb_class, condition_adv, condition, self.optimizers["condition_adv"], contraction=True)
                         train_losses["condition_adv"].append(ret)
                         if cont > 0:
                             train_losses["condition_adv_contraction"].append(cont)
 
                 #TRAIN CONDITION FITING PREDICTOR
                 if gan_sampling:
-                    # fiber_sample = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                    # fiber_sample = torch.rand( size = (samples.size(0), attr_access.fiber_space.out_dim) ).to(self.run_device)
                     # fiber_sample = (fiber_sample * 2) - 1
-                    recons = model.forward_output(fiber_sample, condition, fiber_input=True)
+                    recons = attr_access.forward_output(fiber_sample, condition, fiber_input=True)
                 else:
-                    recons = model.forward_output(samples, condition)
+                    recons = attr_access.forward_output(samples, condition)
                 p_loss, g_loss = self._train_condition_prediction(
-                    classifier=model.predict_condition,
-                    nb_class=model.nb_class,
+                    classifier=attr_access.predict_condition,
+                    nb_class=attr_access.nb_class,
                     reals=samples,
                     fakes=recons,
                     targets=condition,
@@ -301,17 +315,17 @@ class Trainer(object):
 
             #TRAIN GAN
             if gan_sampling:
-                gan_fiber = torch.rand( size = (samples.size(0), model.fiber_space.out_dim) ).to(run_device)
+                gan_fiber = torch.rand( size = (samples.size(0), attr_access.fiber_space.out_dim) ).to(self.run_device)
                 gan_fiber = (gan_fiber * 2) - 1
-                gan_fakes = model.forward_output(gan_fiber, condition, fiber_input=True)
+                gan_fakes = attr_access.forward_output(gan_fiber, condition, fiber_input=True)
             else:
-                gan_fakes = model.forward_output(samples, condition)
+                gan_fakes = attr_access.forward_output(samples, condition)
             g_loss, d_loss = self._train_gan(
                 model,
-                model.predict_gan,
+                attr_access.predict_gan,
                 samples,
                 gan_fakes,
-                run_device,
+                self.run_device,
                 self.optimizers["gan_generator"],
                 self.optimizers["gan_discriminator"],
                 train_g = train_gan_generator_freq > 0 and (self.meta["current_batch_id"] % train_gan_generator_freq == 0),
@@ -326,28 +340,28 @@ class Trainer(object):
 
         return train_losses
 
-    def test(self, model, test_loader, batch_formater, loss_obj):
-        model.eval()
-        test_loss= 0
-        self.meta["current_batch_id"] = 0
-        with torch.no_grad():
-            for batch in test_loader:
-                self.meta["current_batch_id"] += 1
-                self.hooks["test_pass_starts"](model, self)
-                data, target = batch_formater(batch)
-                data = data.to(run_device)
-                target = target.to(run_device)
+    # def test(self, model, test_loader, batch_formater, loss_obj):
+    #     model.eval()
+    #     test_loss= 0
+    #     self.meta["current_batch_id"] = 0
+    #     with torch.no_grad():
+    #         for batch in test_loader:
+    #             self.meta["current_batch_id"] += 1
+    #             self.hooks["test_pass_starts"](model, self)
+    #             data, target = batch_formater(batch)
+    #             data = data.to(self.run_device)
+    #             target = target.to(self.run_device)
               
-                recons = model(data, target)
-                loss = loss_obj(recons, data)
-                loss.to(run_device)
+    #             recons = model(data, target)
+    #             loss = loss_obj(recons, data)
+    #             loss.to(self.run_device)
                     
-                self.batch_loss = loss.item()
-                test_loss += self.batch_loss
-                self.hooks["test_pass_stops"](model, self)
+    #             self.batch_loss = loss.item()
+    #             test_loss += self.batch_loss
+    #             self.hooks["test_pass_stops"](model, self)
             
-        test_loss /= len(test_loader.dataset)
-        return test_loss
+    #     test_loss /= len(test_loader.dataset)
+    #     return test_loss
 
     def get_history(self):
         return {"train": self.meta["train_loss_history"], "test": self.meta["test_loss_history"]}
@@ -376,22 +390,25 @@ class Trainer(object):
     ):
         from tqdm import trange
         
+        attr_access = self.get_model_attr_accessor(model)
+
         pbar = trange(nb_epochs)
+        # print(type(model.backbone))
         self.optimizers = {
             "reconstruction": reconstruction_opt_fct(
-                list(model.backbone.parameters()) + list(model.fiber.parameters()) + list(model.conditions.parameters())
+                list(attr_access.backbone.parameters()) + list(attr_access.fiber.parameters()) + list(attr_access.conditions.parameters())
             ),
             "condition_adv": condition_adv_opt_fct(
-                list(model.fiber_condition_adv.parameters()) + list(model.fiber.parameters())
+                list(attr_access.fiber_condition_adv.parameters()) + list(attr_access.fiber.parameters())
             ),
             "prediction": condition_fit_opt_fct(
-                model.output_classifier.parameters()
+                attr_access.output_classifier.parameters()
             ),
             "condition_fit_generator": condition_fit_generator_opt_fct(
-                list(model.backbone.parameters()) + list(model.conditions.parameters())
+                list(attr_access.backbone.parameters()) + list(attr_access.conditions.parameters())
             ),
-            "gan_generator": gan_generator_opt_fct( list(model.backbone.parameters()) + list(model.conditions.parameters())),
-            "gan_discriminator": gan_discriminator_opt_fct(model.output_gan_discriminator.parameters())
+            "gan_generator": gan_generator_opt_fct( list(attr_access.backbone.parameters()) + list(attr_access.conditions.parameters())),
+            "gan_discriminator": gan_discriminator_opt_fct(attr_access.output_gan_discriminator.parameters())
         }
         self.model = model
         self.hooks["starts"](model, self)
@@ -423,7 +440,7 @@ class Trainer(object):
                     self.meta["train_loss_history"][key].append(train_loss[key].cpu().numpy())
                 if test_loader:
                     die
-                    test_loss = self.test(model, test_loader, batch_formater, run_device)
+                    test_loss = self.test(model, test_loader, batch_formater, self.run_device)
                     self.last_test_loss = test_loss
                     self.meta["test_loss_history"].append(test_loss)
                 self.hooks["epoch_stops"](model, self)

@@ -58,6 +58,7 @@ class AnnDataDataset(torch.utils.data.Dataset):
         self.include_obs = include_obs
         self.obs_transforms = obs_transforms
         self.pre_densify = pre_densify
+        self.densified = False
         self.X_field = X_field
         self.oversample_obs_key = oversample_obs_key
         self._preprocess(adata)
@@ -73,8 +74,9 @@ class AnnDataDataset(torch.utils.data.Dataset):
         
         if self.pre_densify and not isinstance(self.X_data, numpy.ndarray):
             self.X_data = torch.tensor( self.X_data.todense(), dtype=torch.float )
-        else:
-            self.X_data = torch.tensor( self.X_data, dtype=torch.float )
+            self.densified = True
+        # else:
+            # self.X_data = torch.tensor( self.X_data, dtype=torch.float )
 
         self.obs_data = {} 
         if self.include_obs :
@@ -98,7 +100,13 @@ class AnnDataDataset(torch.utils.data.Dataset):
             for u_key in unique_values:
                 self.oversample_indexes["keys"].append(u_key)
                 self.oversample_indexes["indexes"].append(numpy.where(adata.obs[self.oversample_obs_key] == u_key)[0])
-            
+    
+    def get_X_range(self):
+        if self.densified:
+            return ( torch.max(self.X_data), torch.min(self.X_data))
+        else :
+            return ( np.max(self.X_data), np.min(self.X_data))
+   
     def __len__(self):
         return self.X_data.shape[0]
 
@@ -109,7 +117,8 @@ class AnnDataDataset(torch.utils.data.Dataset):
             
         X_data = self.X_data[idx]
 
-        if not self.pre_densify and not isinstance(self.X_data, numpy.ndarray):
+        # if not self.pre_densify and not isinstance(self.X_data, numpy.ndarray):
+        if not self.densified and not isinstance(self.X_data, numpy.ndarray):
             X_data = torch.tensor(X_data.todense(), dtype=torch.float)[0]
         
         sample = { 'X_data': X_data }
@@ -288,7 +297,7 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
     in_size = train_dataset.X_data.shape[1]
     train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
     
-    scale = ( torch.max(train_dataset.X_data), torch.min(train_dataset.X_data))
+    scale = train_dataset.get_X_range()
     print("range of sample inputs:", scale)
 
     return {

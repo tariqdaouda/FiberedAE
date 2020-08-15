@@ -49,7 +49,11 @@ def main():
 @click.option("-m", "--model", help="load a previously trained model", default=None)
 @click.option("--device", help="cpu, cuda, ...", type=str, default="cuda")
 @click.option("--overwrite/--no_overwrite", default=False)
+@click.option("--parallel/--no_parallel", default=False)
 def train(**args):
+    import torch
+    import torch.nn as nn
+
     print(args)
     if args["experiment_name"] :
         print("\t creating folder...")
@@ -83,11 +87,25 @@ def train(**args):
         model_filename=args["model"]
     )
 
+    print("---" )
+    print("Available GPUs: ", torch.cuda.device_count() )
+    print("---" )
+
+    if torch.cuda.device_count() > 1:
+        if args["parallel"]:
+            print("\t use --parallel to activate their use. Running on a single GPUs.")
+        else :
+            print("\t using them.")
+    
+    if args["parallel"]:
+       print("\t\t Setting in || model")
+       model = nn.DataParallel(model)
+    
     print("\t training...")
     if args["epochs"] > 0:
         orig_conf["hps"]["nb_epochs"] = args["epochs"]
     
-    trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"])
+    trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"], run_device=args["device"])
 
     print("\t saving model...")
     vpers.save(

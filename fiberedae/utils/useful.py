@@ -99,7 +99,10 @@ def make_fae_model(config, dataset, model_class, device="cuda", model_filename=N
 
     return model
 
-def train(model, dataset, config, nb_epochs):
+def train(model, dataset, config, nb_epochs, run_device=None):
+    if run_device is not None:
+        config["run_device"] = run_device
+    
     trainer = vtrain.Trainer(**config["trainer"])
     
     history = trainer.run(
