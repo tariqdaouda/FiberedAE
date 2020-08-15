@@ -49,7 +49,6 @@ def main():
 @click.option("-m", "--model", help="load a previously trained model", default=None)
 @click.option("--device", help="cpu, cuda, ...", type=str, default="cuda")
 @click.option("--overwrite/--no_overwrite", default=False)
-@click.option("--parallel/--no_parallel", default=False)
 def train(**args):
     import torch
     import torch.nn as nn
@@ -90,16 +89,9 @@ def train(**args):
     print("---" )
     print("Available GPUs: ", torch.cuda.device_count() )
     print("---" )
-
     if torch.cuda.device_count() > 1:
-        if args["parallel"]:
-            print("\t use --parallel to activate their use. Running on a single GPUs.")
-        else :
-            print("\t using them.")
-    
-    if args["parallel"]:
-       print("\t\t Setting in || model")
-       model = nn.DataParallel(model)
+        print("\t\t Launching in || mode")
+        model = nn.DataParallel(model)
     
     print("\t training...")
     if args["epochs"] > 0:
