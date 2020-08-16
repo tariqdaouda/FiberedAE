@@ -54,63 +54,63 @@ def train(**args):
     import torch.nn as nn
 
     print(args)
-    if args["experiment_name"] :
-        print("\t creating folder...")
-        exp_folder = get_folder_name(args["experiment_name"], args["overwrite"])
-        try:
-            os.mkdir(exp_folder)
-        except FileExistsError:
-            pass
-    else :
-        exp_folder = "."
+   #  if args["experiment_name"] :
+   #      print("\t creating folder...")
+   #      exp_folder = get_folder_name(args["experiment_name"], args["overwrite"])
+   #      try:
+   #          os.mkdir(exp_folder)
+   #      except FileExistsError:
+   #          pass
+   #  else :
+   #      exp_folder = "."
 
-    print("\t loading configuration...")
-    config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
-    print("args:", args)
-    for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
-        if args[arg_key]:
-            print("\t-> Overriding", json_key, "with:", args[arg_key])
-            config["dataset"]["arguments"][json_key] = args[arg_key]
-            orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
+   #  print("\t loading configuration...")
+   #  config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+   #  print("args:", args)
+   #  for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
+   #      if args[arg_key]:
+   #          print("\t-> Overriding", json_key, "with:", args[arg_key])
+   #          config["dataset"]["arguments"][json_key] = args[arg_key]
+   #          orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
 
-    print("\t loading dataset...")
-    dataset = us.load_dataset(config)
+   #  print("\t loading dataset...")
+   #  dataset = us.load_dataset(config)
 
-    print("\t making model...")
-    model = us.make_fae_model(
-        config=config,
-        dataset=dataset,
-        model_class=vmod.FiberedAE,
-        device = args["device"],
-        model_filename=args["model"]
-    )
+   #  print("\t making model...")
+   #  model = us.make_fae_model(
+   #      config=config,
+   #      dataset=dataset,
+   #      model_class=vmod.FiberedAE,
+   #      device = args["device"],
+   #      model_filename=args["model"]
+   #  )
 
-    print("---" )
-    print("Available GPUs: ", torch.cuda.device_count() )
-    print("---" )
-    if torch.cuda.device_count() > 1:
-        print("\t\t Launching in || mode")
-        model = nn.DataParallel(model)
+   #  print("---" )
+   #  print("Available GPUs: ", torch.cuda.device_count() )
+   #  print("---" )
+   #  if torch.cuda.device_count() > 1:
+   #      print("\t\t Launching in || mode")
+   #      model = nn.DataParallel(model)
     
-    print("\t training...")
-    if args["epochs"] > 0:
-        orig_conf["hps"]["nb_epochs"] = args["epochs"]
+   #  print("\t training...")
+   #  if args["epochs"] > 0:
+   #      orig_conf["hps"]["nb_epochs"] = args["epochs"]
     
-    trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"], run_device=args["device"])
+   #  trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"], run_device=args["device"])
 
-    print("\t saving model...")
-    vpers.save(
-        model,
-        filename=os.path.join(exp_folder, "model.pt"),
-        training_history=history,
-        meta_data=None,
-        condition_encoding=dataset["label_encoding"],
-        model_args=None, # buggy pytorch pkl save
-   )
+   #  print("\t saving model...")
+   #  vpers.save(
+   #      model,
+   #      filename=os.path.join(exp_folder, "model.pt"),
+   #      training_history=history,
+   #      meta_data=None,
+   #      condition_encoding=dataset["label_encoding"],
+   #      model_args=None, # buggy pytorch pkl save
+   # )
 
-    print("\t saving config...")
-    with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
-        json.dump(orig_conf, f, indent=4)
+   #  print("\t saving config...")
+   #  with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
+   #      json.dump(orig_conf, f, indent=4)
 
 @main.command()
 @click.argument("configuration_file")
