@@ -74,7 +74,7 @@ def train(**args):
             orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
 
     print("\t loading dataset...")
-    # dataset = us.load_dataset(config)
+    dataset = us.load_dataset(config)
 
     print("\t making model...")
    #  model = us.make_fae_model(
