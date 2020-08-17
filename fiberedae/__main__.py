@@ -66,7 +66,7 @@ def train(**args):
 
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
-   #  print("args:", args)
+    print("config:", config)
    #  for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
    #      if args[arg_key]:
    #          print("\t-> Overriding", json_key, "with:", args[arg_key])
