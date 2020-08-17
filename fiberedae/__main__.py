@@ -54,18 +54,18 @@ def train(**args):
     import torch.nn as nn
 
     print(args)
-   #  if args["experiment_name"] :
-   #      print("\t creating folder...")
-   #      exp_folder = get_folder_name(args["experiment_name"], args["overwrite"])
-   #      try:
-   #          os.mkdir(exp_folder)
-   #      except FileExistsError:
-   #          pass
-   #  else :
-   #      exp_folder = "."
+    if args["experiment_name"] :
+        print("\t creating folder...")
+        exp_folder = get_folder_name(args["experiment_name"], args["overwrite"])
+        try:
+            os.mkdir(exp_folder)
+        except FileExistsError:
+            pass
+    else :
+        exp_folder = "."
 
-   #  print("\t loading configuration...")
-   #  config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
+    print("\t loading configuration...")
+    config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
    #  print("args:", args)
    #  for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
    #      if args[arg_key]:
