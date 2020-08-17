@@ -77,40 +77,40 @@ def train(**args):
     dataset = us.load_dataset(config)
 
     print("\t making model...")
-   #  model = us.make_fae_model(
-   #      config=config,
-   #      dataset=dataset,
-   #      model_class=vmod.FiberedAE,
-   #      device = args["device"],
-   #      model_filename=args["model"]
-   #  )
+    model = us.make_fae_model(
+        config=config,
+        dataset=dataset,
+        model_class=vmod.FiberedAE,
+        device = args["device"],
+        model_filename=args["model"]
+    )
 
-   #  print("---" )
-   #  print("Available GPUs: ", torch.cuda.device_count() )
-   #  print("---" )
-   #  if torch.cuda.device_count() > 1:
-   #      print("\t\t Launching in || mode")
-   #      model = nn.DataParallel(model)
+    print("---" )
+    print("Available GPUs: ", torch.cuda.device_count() )
+    print("---" )
+    if torch.cuda.device_count() > 1:
+        print("\t\t Launching in || mode")
+        model = nn.DataParallel(model)
     
-   #  print("\t training...")
-   #  if args["epochs"] > 0:
-   #      orig_conf["hps"]["nb_epochs"] = args["epochs"]
+    print("\t training...")
+    if args["epochs"] > 0:
+        orig_conf["hps"]["nb_epochs"] = args["epochs"]
     
-   #  trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"], run_device=args["device"])
+    trainer, history = us.train(model, dataset, config, nb_epochs=orig_conf["hps"]["nb_epochs"], run_device=args["device"])
 
-   #  print("\t saving model...")
-   #  vpers.save(
-   #      model,
-   #      filename=os.path.join(exp_folder, "model.pt"),
-   #      training_history=history,
-   #      meta_data=None,
-   #      condition_encoding=dataset["label_encoding"],
-   #      model_args=None, # buggy pytorch pkl save
-   # )
+    print("\t saving model...")
+    vpers.save(
+        model,
+        filename=os.path.join(exp_folder, "model.pt"),
+        training_history=history,
+        meta_data=None,
+        condition_encoding=dataset["label_encoding"],
+        model_args=None, # buggy pytorch pkl save
+   )
 
-   #  print("\t saving config...")
-   #  with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
-   #      json.dump(orig_conf, f, indent=4)
+    print("\t saving config...")
+    with open(os.path.join(exp_folder, "configuration.json"), "w") as f:
+        json.dump(orig_conf, f, indent=4)
 
 @main.command()
 @click.argument("configuration_file")
