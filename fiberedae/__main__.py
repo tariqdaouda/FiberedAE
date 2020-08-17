@@ -67,16 +67,16 @@ def train(**args):
     print("\t loading configuration...")
     config, orig_conf = us.load_configuration(args["configuration_file"], get_original=True)
     print("config:", config)
-   #  for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
-   #      if args[arg_key]:
-   #          print("\t-> Overriding", json_key, "with:", args[arg_key])
-   #          config["dataset"]["arguments"][json_key] = args[arg_key]
-   #          orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
+    for arg_key, json_key in [("sc_input_file", "filepath"), ("sc_condition", "condition_field"), ("sc_backup", "backup_url")]:
+        if args[arg_key]:
+            print("\t-> Overriding", json_key, "with:", args[arg_key])
+            config["dataset"]["arguments"][json_key] = args[arg_key]
+            orig_conf["dataset"]["arguments"][json_key] = args[arg_key]
 
-   #  print("\t loading dataset...")
-   #  dataset = us.load_dataset(config)
+    print("\t loading dataset...")
+    dataset = us.load_dataset(config)
 
-   #  print("\t making model...")
+    print("\t making model...")
    #  model = us.make_fae_model(
    #      config=config,
    #      dataset=dataset,
