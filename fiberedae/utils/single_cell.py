@@ -20,8 +20,8 @@ def load_10x_dataset(filepath, backup_url=None):
         print("X does not seem to be logged, logging it!")
         sc.pp.log1p(adata)
 
-    adata.obs["dataset"] = pd.Series()
-    adata.obs["dataset"] = filename
+    # adata.obs["dataset"] = pd.Series()
+    # adata.obs["dataset"] = filename
     
     print("Scaling X between [0, 1]")
     adata.X = adata.X - np.min(adata.X)
