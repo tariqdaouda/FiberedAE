@@ -42,8 +42,7 @@ class BasicDataset(object):
 
     def __len__(self):
         return len(self.samples)
-
-        
+  
 class AnnDataDataset(torch.utils.data.Dataset):
     def __init__(self, adata, X_field=None, X_expressions_transform=None, include_obs=None, obs_transforms=None, pre_densify=False, oversample_obs_key=None):
         """

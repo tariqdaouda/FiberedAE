@@ -240,5 +240,47 @@ def clean_single_cell(model, adata, run_device):
     print("saving result to: %s..." % args["output"])
     adata.write(args["output"])
 
+@main.command()
+@click.argument("dataset")
+@click.argument("Y_key")
+@click.argument("output_name")
+@click.option("-X", "--X_key", defaul="X", help="must be in .obsm or obs")
+def make_compact_dataset(dataset, Y_key, X_key):
+    """
+    Make a memory efficient version of the anndata
+    """
+    from sklearn import preprocessing
+    import scipy.sparse
+
+    if dataset.find(".h5"):
+        adata = sc.read_10x_h5(dataset)
+    elif dataset.find(".h5ad"):
+        adata = sc.read(dataset)
+    else:
+        raise ValueError("Extension must be either h5 or h5ad")
+
+    if X_key == "X":
+        X = adata.X
+    elif X_key in adata.obsm :
+        X = adata.obsm[X_key]
+    elif X_key in adata.obs :
+        X = adata.obs[X_key]
+    else:
+        raise KeyError("%s is not present in obsm or obs" % X_key)
+
+    if Y_key in adata.obsm :
+        Y = adata.obsm[Y_key]
+    elif Y_key in adata.obs :
+        Y = adata.obs[Y_key]
+    else:
+        raise KeyError("%s is not present in obsm or obs" % Y_key)
+
+    le = preprocessing.LabelEncoder()
+    le.fit(Y)
+    Y = le.transform(Y)
+    scipy.sparse.save_npz("%s.npz" % output_name)
+    scipy.sparse.save_npz("label_encoder.pkl" % output_name)
+    scipy.sparse.save_npz("output_name.npz")
+
 if __name__ == "__main__" :
     main()
