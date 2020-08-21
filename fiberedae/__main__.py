@@ -268,6 +268,8 @@ def make_compact_dataset(dataset, Y_key, X_key):
     else:
         raise KeyError("%s is not present in obsm or obs" % X_key)
 
+    X = X.astype(dtype="float32")
+
     if Y_key in adata.obsm :
         Y = adata.obsm[Y_key]
     elif Y_key in adata.obs :
@@ -278,9 +280,15 @@ def make_compact_dataset(dataset, Y_key, X_key):
     le = preprocessing.LabelEncoder()
     le.fit(Y)
     Y = le.transform(Y)
-    scipy.sparse.save_npz("%s.npz" % output_name)
-    scipy.sparse.save_npz("label_encoder.pkl" % output_name)
-    scipy.sparse.save_npz("output_name.npz")
+    if np.max(Y) < 32767:
+        Y = Y.astype(dtype="int16")
 
+    print("saving...")
+    X.save_npz("%s-X.npz" % output_name)
+    Y.savez("%s-Y.npz" % output_name)
+    with open("%s-label_encoder.pkl" % output_name) as f :
+        pickle.dump(le, f)
+    print("done.")
+    
 if __name__ == "__main__" :
     main()
