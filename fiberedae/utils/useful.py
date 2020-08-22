@@ -14,6 +14,7 @@ def load_dataset(config):
         "olivetti"    : lambda: vdatasets.load_olivetti(**kwargs),
         "blobs"    : lambda: vdatasets.load_blobs(**kwargs),
         "single_cell"    : lambda: vdatasets.load_single_cell(**kwargs),
+        "compact"    : lambda: vdatasets.load_compact(**kwargs),
         "scanpy": lambda: vdatasets.load_scanpy(**kwargs),
         "scvelo": lambda: vdatasets.load_scvelo(**kwargs)
     }

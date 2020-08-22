@@ -10,6 +10,7 @@ from skimage import io, transform
 import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+import scipy.sparse
 
 # Ignore warnings
 import warnings
@@ -129,6 +130,54 @@ class AnnDataDataset(torch.utils.data.Dataset):
             sample["zeros"] = self.obs_data["zeros"][idx]
 
         return sample
+
+class CompactDataset(torch.utils.data.Dataset):
+    def __init__(self, X, Y, oversample=True):
+        self.X = X
+        self.Y = Y
+        self.oversample = oversample
+        
+        if self.oversample and self.Y is not None:
+            unique_values = np.unique(self.Y)
+            self.oversample_indexes = {
+                "keys": [],
+                "indexes":[],
+            }
+            for u_key in unique_values:
+                self.oversample_indexes["keys"].append(u_key)
+                self.oversample_indexes["indexes"].append(numpy.where(self.Y == u_key)[0])
+
+    def get_X_range(self):
+        if torch.is_tensor(self.X):
+            return ( torch.max(self.X), torch.min(self.X))
+        return ( np.max(self.X), np.min(self.X))
+
+    def __getitem__(self, idx):
+        if self.oversample:
+            class_label = numpy.random.randint(0, len(self.oversample_indexes["keys"]))
+            idx = numpy.random.choice(self.oversample_indexes["indexes"][class_label])
+
+        X = self.X[idx]
+        if scipy.sparse.issparse(X):
+            X = X.todense()
+
+        if not torch.is_tensor(X):
+            X = torch.tensor(X, dtype=torch.float)[0]
+
+        if self.Y is None :
+            Y = torch.zeros_like(X)
+        else :
+            Y = self.Y[idx]
+            if not torch.is_tensor(Y):
+                Y = torch.tensor(Y, dtype=torch.long)
+
+        return {
+            "X": X,
+            "Y": Y
+        }
+
+    def __len__(self):
+        return self.X.shape[0]
 
 def is_images(name):
     return name.lower() in ["mnist", "olivetti"]
@@ -259,7 +308,6 @@ def load_olivetti(batch_size, num_workers=8):
         "sample_scale": (0, 1)
     }
 
-
 def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, pre_densify=True, oversample=True, X_field=None,num_workers=8):
     if condition_field:
         le = get_label_encoder(adata.obs[condition_field])
@@ -322,11 +370,53 @@ def make_single_cell_dataset(batch_size, condition_field, adata, dataset_name, p
         "sample_scale": scale
     }
 
-def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup_url=None):
+def make_compact_dataset(batch_size, compactds, dataset_name, pre_densify=True, oversample=True, num_workers=8):
+    if pre_densify:
+        compactds.densify()
+
+    train_dataset = CompactDataset(compactds.X, compactds.Y, oversample=oversample)
+
+    in_size = train_dataset.X.shape[1]
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    
+    scale = train_dataset.get_X_range()
+    print("range of sample inputs:", scale)
+
+    batch_formater = lambda x: ( x["X"], x["Y"] )
+
+    return {
+        "name": dataset_name,
+        "datasets": {
+            "train": train_dataset,
+            "test": None,
+        },
+        "loaders": {
+            "train": train_loader,
+            "test": None,
+        },
+        "shapes": {
+            "nb_class": len(compactds.label_encoder.classes_),
+            "input_size": in_size,
+            "total_size": len(train_dataset),
+            "train_size": len(train_dataset),
+            "test_size": None,
+        },
+        "batch_formater": batch_formater,
+        "label_encoding": compactds.label_encoder,
+        "sample_scale": scale
+    }
+
+def load_single_cell(batch_size, condition_field, filepath, dataset_name, backup_url=None,num_workers=8):
     from . import single_cell
     print("Opening SC dataset:", filepath)
     adata = single_cell.load_10x_dataset(filepath, backup_url=backup_url)
-    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name)
+    return make_single_cell_dataset(batch_size, condition_field, adata, dataset_name,num_workers=num_workers)
+
+def load_compact(batch_size, filepath, dataset_name, pre_densify=False, oversample=True, num_workers=8):
+    from . import compactds
+    print("Opening compact dataset:", filepath)
+    dataset = compactds.read(filepath)
+    return make_compact_dataset(batch_size, dataset, dataset_name=dataset_name, pre_densify=pre_densify, oversample=oversample, num_workers=num_workers)
 
 def load_blobs(n_samples, nb_class, nb_dim, batch_size, mask_class, dropout_rate=0, random_state=1234,num_workers=8):
     """Make a blobs (isotropic gaussians) datasets"""

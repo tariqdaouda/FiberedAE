@@ -242,53 +242,15 @@ def clean_single_cell(model, adata, run_device):
 
 @main.command()
 @click.argument("dataset")
-@click.argument("Y_key")
-@click.argument("output_name")
-@click.option("-X", "--X_key", defaul="X", help="must be in .obsm or obs")
-def make_compact_dataset(dataset, Y_key, X_key):
+@click.argument("output_folder")
+@click.option("-y", "--y_key", default=None, help="The key to use for labels must be in obs or obsm. If not provided considered unlabeled")
+@click.option("-x", "--x_key", default="X", help="must be in .obsm or obs")
+def make_compact_dataset(dataset, x_key, y_key, output_folder):
     """
     Make a memory efficient version of the anndata
     """
-    from sklearn import preprocessing
-    import scipy.sparse
-
-    if dataset.find(".h5"):
-        adata = sc.read_10x_h5(dataset)
-    elif dataset.find(".h5ad"):
-        adata = sc.read(dataset)
-    else:
-        raise ValueError("Extension must be either h5 or h5ad")
-
-    if X_key == "X":
-        X = adata.X
-    elif X_key in adata.obsm :
-        X = adata.obsm[X_key]
-    elif X_key in adata.obs :
-        X = adata.obs[X_key]
-    else:
-        raise KeyError("%s is not present in obsm or obs" % X_key)
-
-    X = X.astype(dtype="float32")
-
-    if Y_key in adata.obsm :
-        Y = adata.obsm[Y_key]
-    elif Y_key in adata.obs :
-        Y = adata.obs[Y_key]
-    else:
-        raise KeyError("%s is not present in obsm or obs" % Y_key)
-
-    le = preprocessing.LabelEncoder()
-    le.fit(Y)
-    Y = le.transform(Y)
-    if np.max(Y) < 32767:
-        Y = Y.astype(dtype="int16")
-
-    print("saving...")
-    X.save_npz("%s-X.npz" % output_name)
-    Y.savez("%s-Y.npz" % output_name)
-    with open("%s-label_encoder.pkl" % output_name) as f :
-        pickle.dump(le, f)
-    print("done.")
+    import fiberedae.utils.compactds as vc
+    vc.anndata_to_compact(dataset, x_key, y_key, output_folder)
     
 if __name__ == "__main__" :
     main()
