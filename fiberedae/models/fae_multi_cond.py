@@ -6,10 +6,10 @@ from fiberedae.utils import nn as nnutils
 
 AVAILABLE_PROJECTION_TYPES = ["torus", "cube"]
 
-def init_weights_b(layer):
-    """Init for the bias"""
-    if type(layer) == torch.nn.Linear:
-        torch.nn.init.xavier_uniform_(layer.weight)
+# def init_weights_b(layer):
+#     """Init for the bias"""
+#     if type(layer) == torch.nn.Linear:
+#         torch.nn.init.xavier_uniform_(layer.weight)
 
 def init_weights(layer, batchsize=256, nonlinearity=torch.sin):
     """Init for weights"""
@@ -188,34 +188,73 @@ class ConditionHandler(torch.nn.Module):
         prediction = self.output_classifier(x_out)
         return prediction
 
+class GANHandler(torch.nn.Module):
+    """docstring for GANHandler"""
+    def __init__(self, x_dim, h_dim, nb_hidden, non_linearity, init_weights, wgan=False):
+        super(GANHandler, self).__init__()
+        self.h_dim = h_dim
+        self.nb_hidden = nb_hidden
+        self.non_linearity = non_linearity
+        self.wgan = wgan
+        
+        if wgan:
+            output_gan_discriminator = nnutils.get_fc_network(
+                x_dim=x_dim,
+                h_dim=h_dim,
+                out_dim=1,
+                nb_layers=nb_hidden,
+                non_linearity=non_linearity,
+                last_non_linearity=None
+            )
+            self.output_gan_discriminator = torch.nn.Sequential(*output_gan_discriminator)
+        else :
+            self.output_gan_discriminator = MLPClassifier(
+                x_dim,
+                nb_classes=2,
+                nb_layers=nb_hidden,
+                h_dim=h_dim,
+                non_linearity=non_linearity,
+                sigmoid_out=True
+            )
+        self.output_gan_discriminator.apply(init_weights)
+
+    def forward(self, last_out):
+        out = self.output_gan_discriminator(last_out)
+        return out
+
+# class FiberHandler(torch.nn.Module):
+#       """docstring for FiberHandler"""
+#     def __init__(self, x_dim, h_dim, fiber_dim, nb_hidden, non_linearity, projection_type. batchnorm):
+#         super(FiberHandler, self).__init__()
+#         self.arg = arg
+#         self.fiber = FiberSpace(    # Encoder
+#             x_dim=x_dim,             # Xdim (Math renaming scheme)
+#             h_dim=h_dim,             # Ydim (Math renaming scheme)
+#             fiber_dim=fiber_dim,             # Fdim (Math renaming scheme)
+#             nb_layers=nb_hidden,
+#             non_linearity=non_linearity,
+#             projection_type=projection_type,
+#             projection_batchnorm=batchnorm
+#         )
+#         self.fiber.apply(init_weights)
+
+#     def forward(self, x):
+#         return self.fiber(x)
+
 class FiberedAE(torch.nn.Module):
     def __init__(self,
-        x_dim,
-        h_dim,
-        base_dim,
-        fiber_dim,
-        nb_class,
-        non_linearity,
+        x_dim
+        fiber_def, 
+        bases_def,
         nb_hidden,
-        nb_fiber_hidden,
-        condition_adv_h_dim,
-        condition_adv_nb_hidden,
-        condition_adv_non_linearity,
-        condition_fit_h_dim,
-        condition_fit_nb_hidden,
-        condition_fit_non_linearity,
-        gan_discriminator_h_dim,
-        gan_discriminator_nb_hidden,
-        gan_discriminator_non_linearity,
+        gan_def,
         fiber_batchnorm,
-        conditioned,
         residual_fiber,
         residual_base,
         contract_fiber,
         contract_base,
         projection_type,
         pnon_linearity_l1=0.,
-        wgan=False,
         output_transform=None,
     ):
         super(FiberedAE, self).__init__()
@@ -223,15 +262,8 @@ class FiberedAE(torch.nn.Module):
         if pnon_linearity_l1 > 0:
             non_linearity = nnutils.PNonLinearity(non_linearity)
 
-        self.fiber = FiberSpace(    # Encoder
-            x_dim=x_dim,             # Xdim (Math renaming scheme)
-            h_dim=h_dim,             # Ydim (Math renaming scheme)
-            fiber_dim=fiber_dim,             # Fdim (Math renaming scheme)
-            nb_layers=nb_fiber_hidden,
-            non_linearity=non_linearity,
-            projection_type=projection_type,
-            projection_batchnorm=fiber_batchnorm
-        )
+        fiber_def["x_dim"] = x_dim
+        self.fiber = FiberSpace(**fiber_def)
         self.fiber.apply(init_weights)
 
         backbone_in_h_dim = h_dim       # Ydim
@@ -277,26 +309,26 @@ class FiberedAE(torch.nn.Module):
         # )
         # self.output_classifier.apply(init_weights)
         
-        if wgan:
-            output_gan_discriminator = nnutils.get_fc_network(
-                x_dim=x_dim,
-                h_dim=gan_discriminator_h_dim,
-                out_dim=1,
-                nb_layers=gan_discriminator_nb_hidden,
-                non_linearity=gan_discriminator_non_linearity,
-                last_non_linearity=None
-            )
-            self.output_gan_discriminator = torch.nn.Sequential(*output_gan_discriminator)
-        else :
-            self.output_gan_discriminator = MLPClassifier(
-                x_dim,
-                nb_classes=2,
-                nb_layers=gan_discriminator_nb_hidden,
-                h_dim=gan_discriminator_h_dim,
-                non_linearity=gan_discriminator_non_linearity,
-                sigmoid_out=True
-            )
-        self.output_gan_discriminator.apply(init_weights)
+        # if wgan:
+        #     output_gan_discriminator = nnutils.get_fc_network(
+        #         x_dim=x_dim,
+        #         h_dim=gan_discriminator_h_dim,
+        #         out_dim=1,
+        #         nb_layers=gan_discriminator_nb_hidden,
+        #         non_linearity=gan_discriminator_non_linearity,
+        #         last_non_linearity=None
+        #     )
+        #     self.output_gan_discriminator = torch.nn.Sequential(*output_gan_discriminator)
+        # else :
+        #     self.output_gan_discriminator = MLPClassifier(
+        #         x_dim,
+        #         nb_classes=2,
+        #         nb_layers=gan_discriminator_nb_hidden,
+        #         h_dim=gan_discriminator_h_dim,
+        #         non_linearity=gan_discriminator_non_linearity,
+        #         sigmoid_out=True
+        #     )
+        # self.output_gan_discriminator.apply(init_weights)
 
         self.pnon_linearity_l1 = pnon_linearity_l1
         self.wgan = wgan
