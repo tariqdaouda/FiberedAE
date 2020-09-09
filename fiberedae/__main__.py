@@ -244,7 +244,7 @@ def clean_single_cell(model, adata, run_device):
 @click.argument("dataset")
 @click.argument("Y_key")
 @click.argument("output_name")
-@click.option("-X", "--X_key", defaul="X", help="must be in .obsm or obs")
+@click.option("-X", "--X_key", default="X", help="must be in .obsm or obs")
 def make_compact_dataset(dataset, Y_key, X_key):
     """
     Make a memory efficient version of the anndata
