@@ -29,7 +29,7 @@ def load_10x_dataset(filepath, backup_url=None):
 
     return adata
 
-def translate(model, adata, condition_key, ref_condition, condition_encoder, batch_size, X_field = None):
+def translate(model, adata, condition_key, ref_condition, condition_encoder, batch_size, X_field = None, run_device="cpu"):
     """
     Naive transfer implementation using the network only (No geodesic transport)
     Corrects batch effect by translating data from an anndata object into a reference condition.
@@ -56,10 +56,10 @@ def translate(model, adata, condition_key, ref_condition, condition_encoder, bat
         conds = condition_encoder.transform( adata.obs[condition_key][start:stop] )
         
         samples = torch.tensor(samples, dtype=torch.float)
-        samples = samples.to(model.run_device)
+        samples = samples.to(run_device)
 
         conds = torch.tensor( conds )
-        conds = conds.to(model.run_device)
+        conds = conds.to(run_device)
 
         if ref_condition is not None:
             conds = conds - conds + ref_condition

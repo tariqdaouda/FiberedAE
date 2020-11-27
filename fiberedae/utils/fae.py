@@ -1,7 +1,7 @@
 import numpy
 import torch
 
-def get_latent_space(model, data_loader, label_encoding, batch_formater, backbone_layer_ids=None, reference_condition=None) :
+def get_latent_space(model, data_loader, label_encoding, batch_formater, backbone_layer_ids=None, reference_condition=None, run_device="cpu") :
     """return latent spaces organised in a dict"""
     model.eval()
     if reference_condition:
@@ -20,8 +20,8 @@ def get_latent_space(model, data_loader, label_encoding, batch_formater, backbon
         if reference_condition :
             target = torch.tensor(numpy.zeros(len(data), dtype="int") + ref_cond)
         
-        data = data.to(model.run_device)
-        target = target.to(model.run_device)
+        data = data.to(run_device)
+        target = target.to(run_device)
 
         obs = model.fiber(data)
         
@@ -52,7 +52,7 @@ def get_latent_space(model, data_loader, label_encoding, batch_formater, backbon
         "backbone_outputs": backbone_outputs 
     }
   
-def translate(model, ref_condition, dataloader, batch_formater):
+def translate(model, ref_condition, dataloader, batch_formater, run_device="cpu"):
     """Naive transfer implementation using the network only (No geodesic transport)"""
     outs = []
     conds = []
@@ -64,7 +64,7 @@ def translate(model, ref_condition, dataloader, batch_formater):
         else:
             cond = condition
 
-        cond = cond.to(model.run_device)
+        cond = cond.to(run_device)
         
         out = model.forward_output(x=samples, cond=cond)
         out = out.detach().cpu().numpy()
